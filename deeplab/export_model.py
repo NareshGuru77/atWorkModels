@@ -34,16 +34,16 @@ flags.DEFINE_string('export_path', None,
 
 flags.DEFINE_integer('num_classes', 21, 'Number of classes.')
 
-flags.DEFINE_multi_integer('crop_size', [513, 513],
+flags.DEFINE_multi_integer('crop_size', [481, 641],
                            'Crop size [height, width].')
 
 # For `xception_65`, use atrous_rates = [12, 24, 36] if output_stride = 8, or
 # rates = [6, 12, 18] if output_stride = 16. For `mobilenet_v2`, use None. Note
 # one could use different atrous_rates/output_stride during training/evaluation.
-flags.DEFINE_multi_integer('atrous_rates', None,
+flags.DEFINE_multi_integer('atrous_rates', [6, 12, 18],
                            'Atrous rates for atrous spatial pyramid pooling.')
 
-flags.DEFINE_integer('output_stride', 8,
+flags.DEFINE_integer('output_stride', 16,
                      'The ratio of input to output spatial resolution.')
 
 # Change to [0.5, 0.75, 1.0, 1.25, 1.5, 1.75] for multi-scale inference.

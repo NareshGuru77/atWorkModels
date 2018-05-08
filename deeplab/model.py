@@ -51,6 +51,8 @@ Liang-Chieh Chen*, George Papandreou*, Iasonas Kokkinos, Kevin Murphy,
 Alan L. Yuille (* equal contribution)
 (https://arxiv.org/abs/1412.7062)
 """
+import sys
+sys.path.append('/content/drive/atWorkModels/')
 import tensorflow as tf
 from deeplab.core import feature_extractor
 
@@ -326,7 +328,8 @@ def multi_scale_logits(images,
         if model_options.merge_method == 'max' else tf.reduce_mean)
     outputs_to_scales_to_logits[output][_MERGED_LOGITS_SCOPE] = merge_fn(
         all_logits, axis=4)
-
+  print 'outputs to scales to logits'
+  print outputs_to_scales_to_logits
   return outputs_to_scales_to_logits
 
 

@@ -14,12 +14,15 @@
 # ==============================================================================
 
 """Extracts features for different models."""
+
+import sys
+sys.path.append('/content/drive/atWorkModels/deeplab/core')
 import functools
 import tensorflow as tf
 
-from deeplab.core import xception
-from nets.mobilenet import mobilenet as mobilenet_lib
-from nets.mobilenet import mobilenet_v2
+from xception import xception
+from mobilenet import mobilenet as mobilenet_lib
+from mobilenet import mobilenet_v2
 
 
 slim = tf.contrib.slim

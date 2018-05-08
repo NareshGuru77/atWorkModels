@@ -28,8 +28,8 @@ import copy
 
 import tensorflow as tf
 
-from nets.mobilenet import conv_blocks as ops
-from nets.mobilenet import mobilenet as lib
+from deeplab.core.mobilenet import conv_blocks as ops
+from deeplab.core.mobilenet import mobilenet as lib
 
 slim = tf.contrib.slim
 op = lib.op
