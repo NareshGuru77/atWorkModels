@@ -1,6 +1,4 @@
-import sys
-sys.path.append('..')
-sys.path.append('../slim')
+
 import numpy as np
 import tensorflow as tf
 from deeplab.datasets import build_data
@@ -13,7 +11,6 @@ slim = tf.contrib.slim
 flags = tf.app.flags
 
 FLAGS = flags.FLAGS
-
 
 flags.DEFINE_string('inference_dir', './atWorkData/inference/',
                     'Where to save inference result')
@@ -45,6 +42,7 @@ _PREDICTION_FORMAT = '%04d_prediction'
 # The format to save prediction
 _RAW_FORMAT = '%04d_raw'
 
+
 def main(unused_argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -52,7 +50,6 @@ def main(unused_argv):
 
     g = tf.Graph()
     with g.as_default():
-
         image_name = FLAGS.image_path.split('/')[-1]
         image_name, image_extension = image_name.split('.')
         image_number = int(image_name)
@@ -60,7 +57,7 @@ def main(unused_argv):
         supported_extensions = ['png', 'jpeg', 'jpg']
 
         if not any(image_extension == extension
-               for extension in supported_extensions):
+                   for extension in supported_extensions):
             raise ValueError('Image extension "{}" not supported...'.
                              format(image_extension))
 
@@ -72,7 +69,7 @@ def main(unused_argv):
 
         model_options = common.ModelOptions(
             outputs_to_num_classes={common.OUTPUT_TYPE: FLAGS.num_classes},
-            crop_size= FLAGS.inference_crop_size,
+            crop_size=FLAGS.inference_crop_size,
             atrous_rates=None,
             output_stride=FLAGS.output_stride)
 
@@ -97,7 +94,7 @@ def main(unused_argv):
             sv.saver.restore(sess, FLAGS.checkpoint_path)
             semantic_predictions = sess.run(predictions)
 
-        result = np.array(semantic_predictions, dtype= np.uint8)
+        result = np.array(semantic_predictions, dtype=np.uint8)
         result = np.squeeze(result)
 
         # save raw result...
@@ -111,6 +108,7 @@ def main(unused_argv):
             result, FLAGS.inference_dir,
             _PREDICTION_FORMAT % image_number, add_colormap=True,
             colormap_type=FLAGS.dataset)
+
 
 if __name__ == '__main__':
     flags.mark_flag_as_required('image_path')
