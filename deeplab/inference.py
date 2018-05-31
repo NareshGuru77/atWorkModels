@@ -19,9 +19,6 @@ flags.DEFINE_string('inference_dir', './atWorkData/inference/',
 flags.DEFINE_string('image_path', None,
                     'Path of the image to segment')
 
-flags.DEFINE_string('inference_graph_path', None,
-                    'Path of the frozen inference graph')
-
 flags.DEFINE_string('checkpoint_path', None,
                     'Path of the checkpoint')
 
@@ -36,6 +33,9 @@ flags.DEFINE_integer('num_classes', None,
 
 flags.DEFINE_multi_integer('inference_crop_size', [471, 631],
                            'Crop size [height, width] for visualization.')
+
+flags.DEFINE_multi_integer('atrous_rates', None,
+                           'Atrous rates for atrous spatial pyramid pooling.')
 
 # The format to save prediction
 _PREDICTION_FORMAT = '%s_prediction'
@@ -76,7 +76,7 @@ def main(unused_argv):
         model_options = common.ModelOptions(
             outputs_to_num_classes={common.OUTPUT_TYPE: FLAGS.num_classes},
             crop_size=FLAGS.inference_crop_size,
-            atrous_rates=None,
+            atrous_rates=FLAGS.atrous_rates,
             output_stride=FLAGS.output_stride)
 
         predictions = model.predict_labels(
@@ -90,7 +90,7 @@ def main(unused_argv):
         #     align_corners=True)
 
         tf.train.get_or_create_global_step()
-        saver = tf.train.Saver(slim.get_variables_to_restore(exclude=['concat_projection']))
+        saver = tf.train.Saver(slim.get_variables_to_restore())#exclude=['concat_projection']))
         sv = tf.train.Supervisor(graph=g,
                                  logdir=FLAGS.inference_dir,
                                  init_op=tf.global_variables_initializer(),
@@ -124,7 +124,6 @@ def main(unused_argv):
 
 if __name__ == '__main__':
     flags.mark_flag_as_required('image_path')
-    flags.mark_flag_as_required('inference_graph_path')
     flags.mark_flag_as_required('checkpoint_path')
     flags.mark_flag_as_required('num_classes')
     tf.app.run()

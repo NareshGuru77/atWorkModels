@@ -84,27 +84,6 @@ flags.DEFINE_integer('max_number_of_evaluations', 0,
                      'Maximum number of eval iterations. Will loop '
                      'indefinitely upon nonpositive values.')
 
-def get_confusion_matrix(predictions, label, num_classes):
-    batch_confusion = tf.confusion_matrix(label, predictions,
-                                          num_classes=num_classes,
-                                          name='batch_confusion')
-
-    confusion = tf.Variable(
-        initial_value=tf.zeros([num_classes, num_classes], dtype=tf.int32),
-        name='confusion_matrix',
-        trainable=False,
-        collections=None,
-        validate_shape=True)
-
-    # Create the update op for doing a "+=" accumulation on the batch
-    confusion_update = confusion.assign(confusion + batch_confusion)
-    # Cast counts to float so tf.summary.image renormalizes to [0,255]
-    confusion_image = tf.reshape(tf.cast(confusion, tf.float32),
-                                 [1, num_classes, num_classes, 1])
-
-
-    return confusion, confusion_update
-
 
 def main(unused_argv):
   tf.logging.set_verbosity(tf.logging.INFO)
@@ -182,24 +161,16 @@ def main(unused_argv):
 
     num_eval_iters = None
 
-    variables_to_restore = slim.get_variables_to_restore(exclude=['confusion_matrix'])
-
     if FLAGS.max_number_of_evaluations > 0:
       num_eval_iters = FLAGS.max_number_of_evaluations
-    [confusion_matrix] = slim.evaluation.evaluation_loop(
+    slim.evaluation.evaluation_loop(
         master=FLAGS.master,
         checkpoint_dir=FLAGS.checkpoint_dir,
         logdir=FLAGS.eval_logdir,
         num_evals=num_batches,
-          variables_to_restore=variables_to_restore,
         eval_op=list(metrics_to_updates.values()),
         max_number_of_evaluations=num_eval_iters,
-        eval_interval_secs=FLAGS.eval_interval_secs,
-        final_op=get_confusion_matrix(predictions, labels,
-                                      dataset.num_classes))
-    #variables_to_restore=variables_to_restore,
-    #
-    print (confusion_matrix)
+        eval_interval_secs=FLAGS.eval_interval_secs)
 
 
 if __name__ == '__main__':
