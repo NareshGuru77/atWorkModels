@@ -5,6 +5,7 @@ from deeplab.datasets import build_data
 from deeplab import common
 from deeplab import model
 from deeplab.utils import save_annotation
+import cv2
 
 slim = tf.contrib.slim
 
@@ -37,10 +38,10 @@ flags.DEFINE_multi_integer('inference_crop_size', [471, 631],
                            'Crop size [height, width] for visualization.')
 
 # The format to save prediction
-_PREDICTION_FORMAT = '%04d_prediction'
+_PREDICTION_FORMAT = '%s_prediction'
 
 # The format to save prediction
-_RAW_FORMAT = '%04d_raw'
+_RAW_FORMAT = '%s_raw'
 
 
 def main(unused_argv):
@@ -52,7 +53,6 @@ def main(unused_argv):
     with g.as_default():
         image_name = FLAGS.image_path.split('/')[-1]
         image_name, image_extension = image_name.split('.')
-        image_number = int(image_name)
 
         supported_extensions = ['png', 'jpeg', 'jpg']
 
@@ -64,6 +64,12 @@ def main(unused_argv):
         reader = build_data.ImageReader(image_extension)
         image = reader.decode_image(tf.gfile.FastGFile(FLAGS.image_path, 'r').read())
         image = tf.identity(image)
+        original_image_dimensions = image.get_shape().as_list()[0:2]
+        original_image_dimensions = reversed(original_image_dimensions)
+
+        image = tf.image.resize_images(
+            image, [480, 640], method=tf.image.ResizeMethod.BILINEAR,
+            align_corners=True)
         image.set_shape([None, None, 3])
         image = tf.expand_dims(image, 0)
 
@@ -78,9 +84,13 @@ def main(unused_argv):
             model_options=model_options,
             image_pyramid=None)
         predictions = predictions[common.OUTPUT_TYPE]
+        # predictions = tf.image.resize_images(
+        #     predictions, original_image_dimensions,
+        #     method=tf.image.ResizeMethod.BILINEAR,
+        #     align_corners=True)
 
         tf.train.get_or_create_global_step()
-        saver = tf.train.Saver(slim.get_variables_to_restore())
+        saver = tf.train.Saver(slim.get_variables_to_restore(exclude=['concat_projection']))
         sv = tf.train.Supervisor(graph=g,
                                  logdir=FLAGS.inference_dir,
                                  init_op=tf.global_variables_initializer(),
@@ -94,19 +104,21 @@ def main(unused_argv):
             sv.saver.restore(sess, FLAGS.checkpoint_path)
             semantic_predictions = sess.run(predictions)
 
+
         result = np.array(semantic_predictions, dtype=np.uint8)
         result = np.squeeze(result)
+        result = cv2.resize(result, tuple(original_image_dimensions))
 
         # save raw result...
         save_annotation.save_annotation(
             result, FLAGS.inference_dir,
-            _RAW_FORMAT % image_number,
+            _RAW_FORMAT % image_name,
             add_colormap=False)
 
         # save result as color image...
         save_annotation.save_annotation(
             result, FLAGS.inference_dir,
-            _PREDICTION_FORMAT % image_number, add_colormap=True,
+            _PREDICTION_FORMAT % image_name, add_colormap=True,
             colormap_type=FLAGS.dataset)
 
 

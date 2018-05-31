@@ -26,11 +26,13 @@ import numpy as np
 # Dataset names.
 _CITYSCAPES = 'cityscapes'
 _PASCAL = 'pascal'
+_ATWORK = 'atWork'
 
 # Max number of entries in the colormap for each dataset.
 _DATASET_MAX_ENTRIES = {
     _CITYSCAPES: 19,
     _PASCAL: 256,
+    _ATWORK: 15,
 }
 
 
@@ -63,6 +65,29 @@ def create_cityscapes_label_colormap():
   ])
   return colormap
 
+def create_atWork_label_colormap():
+
+  colormap = np.asarray([
+      [128, 64, 128],
+      [244, 35, 232],
+      [70, 70, 70],
+      [102, 102, 156],
+      [190, 153, 153],
+      [153, 153, 153],
+      [250, 170, 30],
+      [220, 220, 0],
+      [107, 142, 35],
+      [152, 251, 152],
+      [70, 130, 180],
+      [220, 20, 60],
+      [255, 0, 0],
+      [0, 0, 142],
+      [0, 0, 70],
+  ])
+  return colormap
+
+def get_atWork_name():
+    return _ATWORK
 
 def get_pascal_name():
   return _PASCAL
@@ -118,6 +143,8 @@ def create_label_colormap(dataset=_PASCAL):
     return create_pascal_label_colormap()
   elif dataset == _CITYSCAPES:
     return create_cityscapes_label_colormap()
+  elif dataset == _ATWORK:
+    return create_atWork_label_colormap()
   else:
     raise ValueError('Unsupported dataset.')
 

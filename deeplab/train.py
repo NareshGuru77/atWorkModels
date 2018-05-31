@@ -16,10 +16,6 @@
 
 See model.py for more details and usage.
 """
-
-import sys
-sys.path.append('/content/drive/atWorkModels/')
-sys.path.append('/content/drive/atWorkModels/deeplab')
 import six
 import tensorflow as tf
 from deeplab import common

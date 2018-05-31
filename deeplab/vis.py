@@ -87,7 +87,7 @@ flags.DEFINE_string('dataset_dir', None, 'Where the dataset reside.')
 flags.DEFINE_enum('colormap_type', 'pascal', ['pascal', 'cityscapes'],
                   'Visualization colormap type.')
 
-flags.DEFINE_boolean('also_save_raw_predictions', False,
+flags.DEFINE_boolean('also_save_raw_predictions', True,
                      'Also save raw predictions.')
 
 flags.DEFINE_integer('max_number_of_iterations', 0,
@@ -101,10 +101,13 @@ _SEMANTIC_PREDICTION_SAVE_FOLDER = 'segmentation_results'
 _RAW_SEMANTIC_PREDICTION_SAVE_FOLDER = 'raw_segmentation_results'
 
 # The format to save image.
-_IMAGE_FORMAT = '%06d_image'
+_IMAGE_FORMAT = '%04d_image'
 
 # The format to save prediction
-_PREDICTION_FORMAT = '%06d_prediction'
+_PREDICTION_FORMAT = '%04d_prediction'
+
+# The format to save prediction
+_RAW_FORMAT = '%04d_raw'
 
 # To evaluate Cityscapes results on the evaluation server, the labels used
 # during training should be mapped to the labels for evaluation.
@@ -184,7 +187,8 @@ def _process_batch(sess, original_images, semantic_predictions, image_names,
             crop_semantic_prediction,
             train_id_to_eval_id)
       save_annotation.save_annotation(
-          crop_semantic_prediction, raw_save_dir, image_filename,
+          crop_semantic_prediction, raw_save_dir,
+          _RAW_FORMAT % (image_id_offset + i),
           add_colormap=False)
 
 
@@ -281,8 +285,10 @@ def main(unused_argv):
     while (FLAGS.max_number_of_iterations <= 0 or
            num_iters < FLAGS.max_number_of_iterations):
       num_iters += 1
+
       last_checkpoint = slim.evaluation.wait_for_new_checkpoint(
           FLAGS.checkpoint_dir, last_checkpoint)
+      
       start = time.time()
       tf.logging.info(
           'Starting visualization at ' + time.strftime('%Y-%m-%d-%H:%M:%S',

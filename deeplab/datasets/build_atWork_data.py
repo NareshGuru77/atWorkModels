@@ -25,25 +25,25 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
     'train_image_folder',
-    './data/image/training',
-    'Folder containing trainng images')
+    '../atWorkData/real_augmented/training/image',
+    'Folder containing training images')
 tf.app.flags.DEFINE_string(
     'train_image_label_folder',
-    './data/ground_truth_combined/training',
-    'Folder containing annotations for trainng images')
+    '../atWorkData/real_augmented/training/label_size_invariant',
+    'Folder containing annotations for training images')
 
 tf.app.flags.DEFINE_string(
     'val_image_folder',
-    './data/image/validation',
+    '../atWorkData/real_augmented/validation/image',
     'Folder containing validation images')
 
 tf.app.flags.DEFINE_string(
     'val_image_label_folder',
-    './data/ground_truth_combined/validation',
+    '../atWorkData/real_augmented/validation/label_size_invariant',
     'Folder containing annotations for validation')
 
 tf.app.flags.DEFINE_string(
-    'output_dir', './atWork_combined/tfrecord',
+    'output_dir', '../atWorkData/atWork_size_invariant/tfrecord',
     'Path to save converted SSTable of Tensorflow example')
 
 _NUM_SHARDS = 4
@@ -60,7 +60,7 @@ def _convert_dataset(dataset_split, dataset_dir, dataset_label_dir):
     RuntimeError: If loaded image and label have different shape.
   """
 
-  img_names = tf.gfile.Glob(os.path.join(dataset_dir, '*.png'))
+  img_names = tf.gfile.Glob(os.path.join(dataset_dir, '*.jpg'))
   random.shuffle(img_names)
   seg_names = []
   for f in img_names:
