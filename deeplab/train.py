@@ -71,7 +71,7 @@ flags.DEFINE_boolean('save_summaries_images', False,
 
 # Settings for training strategy.
 
-flags.DEFINE_enum('learning_policy', 'poly', ['poly', 'step'],
+flags.DEFINE_enum('learning_policy', 'cosine_restarts', ['poly', 'step', 'cosine_restarts'],
                   'Learning rate policy for training.')
 
 # Use 0.007 when training on PASCAL augmented training set, train_aug. When
