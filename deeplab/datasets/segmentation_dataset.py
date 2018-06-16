@@ -15,27 +15,6 @@
 
 """Provides data from semantic segmentation datasets.
 
-The SegmentationDataset class provides both images and annotations (semantic
-segmentation and/or instance segmentation) for TensorFlow. Currently, we
-support the following datasets:
-
-1. PASCAL VOC 2012 (http://host.robots.ox.ac.uk/pascal/VOC/voc2012/).
-
-PASCAL VOC 2012 semantic segmentation dataset annotates 20 foreground objects
-(e.g., bike, person, and so on) and leaves all the other semantic classes as
-one background class. The dataset contains 1464, 1449, and 1456 annotated
-images for the training, validation and test respectively.
-
-2. Cityscapes dataset (https://www.cityscapes-dataset.com)
-
-The Cityscapes dataset contains 19 semantic labels (such as road, person, car,
-and so on) for urban street scenes.
-
-3. ADE20K dataset (http://groups.csail.mit.edu/vision/datasets/ADE20K)
-
-The ADE20K dataset contains 150 semantic labels both urban street scenes and
-indoor scenes.
-
 References:
   M. Everingham, S. M. A. Eslami, L. V. Gool, C. K. I. Williams, J. Winn,
   and A. Zisserman, The pascal visual object classes challenge a retrospective.
@@ -71,64 +50,82 @@ DatasetDescriptor = collections.namedtuple(
     ['splits_to_sizes',   # Splits of the dataset into training, val, and test.
      'num_classes',   # Number of semantic classes.
      'ignore_label',  # Ignore label value.
+     'labels_to_class',
     ]
 )
 
-_CITYSCAPES_INFORMATION = DatasetDescriptor(
-    splits_to_sizes={
-        'train': 2975,
-        'val': 500,
-    },
-    num_classes=19,
-    ignore_label=255,
-)
-
-_PASCAL_VOC_SEG_INFORMATION = DatasetDescriptor(
-    splits_to_sizes={
-        'train': 1464,
-        'trainval': 2913,
-        'val': 1449,
-    },
-    num_classes=21,
-    ignore_label=255,
-)
-
-# These number (i.e., 'train'/'test') seems to have to be hard coded
-# You are required to figure it out for your training/testing example.
-_ADE20K_INFORMATION = DatasetDescriptor(
+_ATWORK_BINARY_INFORMATION = DatasetDescriptor(
     splits_to_sizes = {
-        'train': 20210, # num of samples in images/training
-        'val': 2000, # num of samples in images/validation
-    },
-    num_classes=150,
-    ignore_label=255,
-)
-
-_ATWORK_INFORMATION = DatasetDescriptor(
-    splits_to_sizes = {
-        'train': 7500, # num of samples in images/training
-        'val': 942, # num of samples in images/validation
+        'train': 7500,
+        'val': 942,
         'test': 939,
-        'inference': 1,
+        'trainVal': 8442,
+        'trainValTest': 9381,
+    },
+    num_classes=2,
+    ignore_label=255,
+    labels_to_class={0: 'background', 1: 'foreground'},
+)
+
+_ATWORK_SIMILAR_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train': 7500,
+        'val': 942,
+        'test': 939,
+        'trainVal': 8442,
+        'trainValTest': 9381,
     },
     num_classes=13,
     ignore_label=255,
+    labels_to_class={0: 'background', 1: 'f/s20/40_20/40_B/G', 2: 'm20_100', 3: 'm20/30',
+                     4: 'r20', 5: 'bearing_box', 6: 'bearing', 7: 'axis', 8: 'distance_tube',
+                     9: 'motor', 10: 'container', 11: 'em_01', 12: 'em_02'},
+)
+
+_ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train': 7500,
+        'val': 942,
+        'test': 939,
+        'trainVal': 8442,
+        'trainValTest': 9381,
+    },
+    num_classes=15,
+    ignore_label=255,
+    labels_to_class={0: 'background', 1: 'f/s20/40_20/40_B', 2: 'f/s20/40_20/40_G',
+                     3: 'm20_100', 4: 'm20/30', 5: 'r20', 6: 'bearing_box', 7: 'bearing',
+                     8: 'axis', 9: 'distance_tube', 10: 'motor', 11: 'container_box_blue',
+                     12: 'container_box_red', 13: 'em_01', 14: 'em_02'},
+)
+
+_ATWORK_FULL_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train': 7500,
+        'val': 942,
+        'test': 939,
+        'trainVal': 8442,
+        'trainValTest': 9381,
+    },
+    num_classes=19,
+    ignore_label=255,
+    labels_to_class={0: 'background', 1: 'f20_20_B', 2: 's40_40_B', 3: 'f20_20_G',
+                     4: 's40_40_G', 5: 'm20_100', 6: 'm20', 7: 'm30', 8: 'r20',
+                     9: 'bearing_box_ax01', 10: 'bearing', 11: 'axis', 12: 'distance_tube',
+                     13: 'motor', 14: 'container_box_blue', 15: 'container_box_red',
+                     16: 'bearing_box_ax16', 17: 'em_01', 18: 'em_02'}
+,
 )
 
 
 _DATASETS_INFORMATION = {
-    'cityscapes': _CITYSCAPES_INFORMATION,
-    'pascal_voc_seg': _PASCAL_VOC_SEG_INFORMATION,
-    'ade20k': _ADE20K_INFORMATION,
-    'atWork': _ATWORK_INFORMATION,
+    'atWork_binary': _ATWORK_SIMILAR_INFORMATION,
+    'atWork_similar': _ATWORK_SIMILAR_INFORMATION,
+    'atWork_size_invariant': _ATWORK_SIMILAR_INFORMATION,
+    'atWork_full': _ATWORK_SIMILAR_INFORMATION,
 }
 
 # Default file pattern of TFRecord of TensorFlow Example.
 _FILE_PATTERN = '%s-*'
-
-
-def get_cityscapes_dataset_name():
-  return 'cityscapes'
 
 
 def get_dataset(dataset_name, split_name, dataset_dir):
@@ -156,6 +153,7 @@ def get_dataset(dataset_name, split_name, dataset_dir):
   # Prepare the variables for different datasets.
   num_classes = _DATASETS_INFORMATION[dataset_name].num_classes
   ignore_label = _DATASETS_INFORMATION[dataset_name].ignore_label
+  labels_to_class = _DATASETS_INFORMATION[dataset_name].labels_to_class
 
   file_pattern = _FILE_PATTERN
   file_pattern = os.path.join(dataset_dir, file_pattern % split_name)
@@ -202,5 +200,6 @@ def get_dataset(dataset_name, split_name, dataset_dir):
       items_to_descriptions=_ITEMS_TO_DESCRIPTIONS,
       ignore_label=ignore_label,
       num_classes=num_classes,
+      labels_to_class=labels_to_class,
       name=dataset_name,
       multi_label=True)

@@ -198,9 +198,6 @@ def main(unused_argv):
   dataset = segmentation_dataset.get_dataset(
       FLAGS.dataset, FLAGS.vis_split, dataset_dir=FLAGS.dataset_dir)
   train_id_to_eval_id = None
-  if dataset.name == segmentation_dataset.get_cityscapes_dataset_name():
-    tf.logging.info('Cityscapes requires converting train_id to eval_id.')
-    train_id_to_eval_id = _CITYSCAPES_TRAIN_ID_TO_EVAL_ID
 
   # Prepare for visualization.
   tf.gfile.MakeDirs(FLAGS.vis_logdir)

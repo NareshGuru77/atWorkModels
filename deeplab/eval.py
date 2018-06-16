@@ -174,6 +174,10 @@ def main(unused_argv):
                                 summarize=dataset.num_classes,
                                 message='Category IOU')
 
+    for index, t in enumerate(tf.unstack(category_iou_tensor)):
+        slim.summaries.add_scalar_summary(
+            t, dataset.labels_to_class[index], print_summary=False)
+
 
     if FLAGS.max_number_of_evaluations > 0:
       num_eval_iters = FLAGS.max_number_of_evaluations
