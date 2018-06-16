@@ -81,22 +81,6 @@ flags.DEFINE_integer('max_number_of_evaluations', 0,
                      'Maximum number of eval iterations. Will loop '
                      'indefinitely upon nonpositive values.')
 
-def get_confusion_matrix(predictions, label, num_classes):
-    batch_confusion = tf.confusion_matrix(label, predictions,
-                                          num_classes=num_classes,
-                                          name='batch_confusion')
-
-    confusion = tf.Variable(
-        initial_value=tf.zeros([num_classes, num_classes], dtype=tf.int32),
-        name='confusion_matrix',
-        trainable=False,
-        collections=[tf.GraphKeys.LOCAL_VARIABLES],
-        validate_shape=True)
-
-    confusion_update = confusion.assign(confusion + batch_confusion)
-
-    return confusion, confusion_update
-
 
 def main(unused_argv):
   tf.logging.set_verbosity(tf.logging.INFO)
@@ -174,14 +158,22 @@ def main(unused_argv):
                     FLAGS.eval_batch_size, num_batches)
 
     num_eval_iters = None
-    #confusion_matrix = tf.get_default_graph().get_tensor_by_name("mean_iou/confusion_matrix/control_dependency_1:0")
-    #confusion_matrix = tf.Print(confusion_matrix, [confusion_matrix])
+    # for n in g.as_graph_def().node:
+    #     if 'mean_iou' in n.name:
+    #         if not 'Assert' in n.name:
+    #             if not 'assert' in n.name:
+    #                 print (n.name)
 
-    confusion, confusion_update = get_confusion_matrix(predictions, labels,
-                                                       dataset.num_classes)
+    confusion_tensor = g.get_tensor_by_name("mean_iou/total_confusion_matrix:0")
+    confusion_matrix = tf.Print(confusion_tensor, [confusion_tensor],
+                                summarize=dataset.num_classes * dataset.num_classes,
+                                message='Confusion Matrix')
 
-    confusion_matrix = tf.Print(confusion, [confusion],
-                                summarize=dataset.num_classes*dataset.num_classes)
+    category_iou_tensor = g.get_tensor_by_name("mean_iou/div:0")
+    category_iou = tf.Print(category_iou_tensor, [category_iou_tensor],
+                                summarize=dataset.num_classes,
+                                message='Category IOU')
+
 
     if FLAGS.max_number_of_evaluations > 0:
       num_eval_iters = FLAGS.max_number_of_evaluations
@@ -190,10 +182,10 @@ def main(unused_argv):
         checkpoint_dir=FLAGS.checkpoint_dir,
         logdir=FLAGS.eval_logdir,
         num_evals=num_batches,
-        eval_op=[metrics_to_updates.values(), confusion, confusion_update],
+        eval_op=[metrics_to_updates.values()],
         max_number_of_evaluations=num_eval_iters,
         eval_interval_secs=FLAGS.eval_interval_secs,
-        final_op=confusion_matrix)
+        final_op=[confusion_matrix, category_iou])
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('checkpoint_dir')
