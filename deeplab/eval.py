@@ -17,9 +17,6 @@
 See model.py for more details and usage.
 """
 
-import sys
-sys.path.append('..')
-sys.path.append('../slim')
 import six
 import math
 import tensorflow as tf
@@ -84,6 +81,22 @@ flags.DEFINE_integer('max_number_of_evaluations', 0,
                      'Maximum number of eval iterations. Will loop '
                      'indefinitely upon nonpositive values.')
 
+def get_confusion_matrix(predictions, label, num_classes):
+    batch_confusion = tf.confusion_matrix(label, predictions,
+                                          num_classes=num_classes,
+                                          name='batch_confusion')
+
+    confusion = tf.Variable(
+        initial_value=tf.zeros([num_classes, num_classes], dtype=tf.int32),
+        name='confusion_matrix',
+        trainable=False,
+        collections=[tf.GraphKeys.LOCAL_VARIABLES],
+        validate_shape=True)
+
+    confusion_update = confusion.assign(confusion + batch_confusion)
+
+    return confusion, confusion_update
+
 
 def main(unused_argv):
   tf.logging.set_verbosity(tf.logging.INFO)
@@ -94,7 +107,8 @@ def main(unused_argv):
   tf.gfile.MakeDirs(FLAGS.eval_logdir)
   tf.logging.info('Evaluating on %s set', FLAGS.eval_split)
 
-  with tf.Graph().as_default():
+  g = tf.Graph()
+  with g.as_default():
     samples = input_generator.get(
         dataset,
         FLAGS.eval_crop_size,
@@ -160,6 +174,14 @@ def main(unused_argv):
                     FLAGS.eval_batch_size, num_batches)
 
     num_eval_iters = None
+    #confusion_matrix = tf.get_default_graph().get_tensor_by_name("mean_iou/confusion_matrix/control_dependency_1:0")
+    #confusion_matrix = tf.Print(confusion_matrix, [confusion_matrix])
+
+    confusion, confusion_update = get_confusion_matrix(predictions, labels,
+                                                       dataset.num_classes)
+
+    confusion_matrix = tf.Print(confusion, [confusion],
+                                summarize=dataset.num_classes*dataset.num_classes)
 
     if FLAGS.max_number_of_evaluations > 0:
       num_eval_iters = FLAGS.max_number_of_evaluations
@@ -168,10 +190,10 @@ def main(unused_argv):
         checkpoint_dir=FLAGS.checkpoint_dir,
         logdir=FLAGS.eval_logdir,
         num_evals=num_batches,
-        eval_op=list(metrics_to_updates.values()),
+        eval_op=[metrics_to_updates.values(), confusion, confusion_update],
         max_number_of_evaluations=num_eval_iters,
-        eval_interval_secs=FLAGS.eval_interval_secs)
-
+        eval_interval_secs=FLAGS.eval_interval_secs,
+        final_op=confusion_matrix)
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('checkpoint_dir')
