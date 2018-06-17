@@ -85,32 +85,6 @@ flags.DEFINE_integer('max_number_of_evaluations', 0,
                      'Maximum number of eval iterations. Will loop '
                      'indefinitely upon nonpositive values.')
 
-def plot_confusion_matrix(classes, cm):
-
-    fig = matplotlib.figure.Figure(figsize=(7, 7), dpi=320, facecolor='w', edgecolor='k')
-    ax = fig.add_subplot(1, 1, 1)
-    #im = ax.imshow(cm, cmap='Oranges')
-    tick_marks = np.arange(len(classes))
-
-    ax.set_xlabel('Predicted', fontsize=7)
-    ax.set_xticks(tick_marks)
-    c = ax.set_xticklabels(classes, fontsize=4, rotation=-90, ha='center')
-    ax.xaxis.set_label_position('bottom')
-    ax.xaxis.tick_bottom()
-
-    ax.set_ylabel('True Label', fontsize=7)
-    ax.set_yticks(tick_marks)
-    ax.set_yticklabels(classes, fontsize=4, va='center')
-    ax.yaxis.set_label_position('left')
-    ax.yaxis.tick_left()
-
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        ax.text(j, i, format(cm[i, j], 's') if cm[i, j] != 0 else '.', horizontalalignment="center", fontsize=6,
-                verticalalignment='center', color="black")
-    fig.set_tight_layout(True)
-    summary = tfplot.figure.to_summary(fig, tag='Confusion_Matrix/Image')
-    return summary
-
 
 def main(unused_argv):
   tf.logging.set_verbosity(tf.logging.INFO)
