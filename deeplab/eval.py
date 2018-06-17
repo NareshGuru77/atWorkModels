@@ -24,6 +24,10 @@ from deeplab import common
 from deeplab import model
 from deeplab.datasets import segmentation_dataset
 from deeplab.utils import input_generator
+import itertools
+import tfplot
+import matplotlib
+import numpy as np
 
 slim = tf.contrib.slim
 
@@ -80,6 +84,32 @@ flags.DEFINE_string('dataset_dir', None, 'Where the dataset reside.')
 flags.DEFINE_integer('max_number_of_evaluations', 0,
                      'Maximum number of eval iterations. Will loop '
                      'indefinitely upon nonpositive values.')
+
+def plot_confusion_matrix(classes, cm):
+
+    fig = matplotlib.figure.Figure(figsize=(7, 7), dpi=320, facecolor='w', edgecolor='k')
+    ax = fig.add_subplot(1, 1, 1)
+    #im = ax.imshow(cm, cmap='Oranges')
+    tick_marks = np.arange(len(classes))
+
+    ax.set_xlabel('Predicted', fontsize=7)
+    ax.set_xticks(tick_marks)
+    c = ax.set_xticklabels(classes, fontsize=4, rotation=-90, ha='center')
+    ax.xaxis.set_label_position('bottom')
+    ax.xaxis.tick_bottom()
+
+    ax.set_ylabel('True Label', fontsize=7)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(classes, fontsize=4, va='center')
+    ax.yaxis.set_label_position('left')
+    ax.yaxis.tick_left()
+
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        ax.text(j, i, format(cm[i, j], 's') if cm[i, j] != 0 else '.', horizontalalignment="center", fontsize=6,
+                verticalalignment='center', color="black")
+    fig.set_tight_layout(True)
+    summary = tfplot.figure.to_summary(fig, tag='Confusion_Matrix/Image')
+    return summary
 
 
 def main(unused_argv):
@@ -178,6 +208,20 @@ def main(unused_argv):
         slim.summaries.add_scalar_summary(
             t, dataset.labels_to_class[index], print_summary=False)
 
+    class_names = tf.identity(list(dataset.labels_to_class.values()))
+    class_names = tf.reshape(class_names, (dataset.num_classes, 1))
+    confusion_string = tf.concat([class_names, tf.as_string(confusion_tensor,
+                                               precision=0)], 1)
+    class_names = tf.reshape(class_names, (1, dataset.num_classes))
+    empty_column_name = tf.identity('...confusion...')
+    empty_column_name = tf.reshape(empty_column_name, (1, 1))
+    append_empty_column = tf.concat([empty_column_name, class_names], 1)
+    confusion_string = tf.concat([append_empty_column, confusion_string], 0)
+
+    summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+    summaries.add(tf.summary.text('confusion_matrix', confusion_string))
+    summary_op = tf.summary.merge(list(summaries))
+
 
     if FLAGS.max_number_of_evaluations > 0:
       num_eval_iters = FLAGS.max_number_of_evaluations
@@ -186,6 +230,7 @@ def main(unused_argv):
         checkpoint_dir=FLAGS.checkpoint_dir,
         logdir=FLAGS.eval_logdir,
         num_evals=num_batches,
+        summary_op=summary_op,
         eval_op=[metrics_to_updates.values()],
         max_number_of_evaluations=num_eval_iters,
         eval_interval_secs=FLAGS.eval_interval_secs,
