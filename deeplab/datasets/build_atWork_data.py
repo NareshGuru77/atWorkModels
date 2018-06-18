@@ -25,89 +25,108 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
     'train_image_folder',
-    '../atWorkData/real_augmented/training/image',
+    '../atWorkData/final_data/real_augmented/training/image',
     'Folder containing training images')
 tf.app.flags.DEFINE_string(
     'train_image_label_folder',
-    '../atWorkData/real_augmented/training/label_size_invariant',
+    '../atWorkData/final_data/real_augmented/training/label_size_invariant',
     'Folder containing annotations for training images')
 
 tf.app.flags.DEFINE_string(
     'val_image_folder',
-    '../atWorkData/real_augmented/validation/image',
+    '../atWorkData/final_data/real_augmented/validation/image',
     'Folder containing validation images')
 
 tf.app.flags.DEFINE_string(
     'val_image_label_folder',
-    '../atWorkData/real_augmented/validation/label_size_invariant',
+    '../atWorkData/final_data/real_augmented/validation/label_size_invariant',
     'Folder containing annotations for validation')
 
 tf.app.flags.DEFINE_string(
-    'output_dir', '../atWorkData/atWork_size_invariant/tfrecord',
+    'test_image_folder',
+    '../atWorkData/final_data/real_augmented/test/image',
+    'Folder containing test images')
+
+tf.app.flags.DEFINE_string(
+    'test_image_label_folder',
+    '../atWorkData/final_data/real_augmented/test/label_size_invariant',
+    'Folder containing annotations for test')
+
+tf.app.flags.DEFINE_string(
+    'output_dir', '../atWorkData/final_data/atWork_size_invariant/tfrecord',
     'Path to save converted SSTable of Tensorflow example')
 
 _NUM_SHARDS = 4
 
 def _convert_dataset(dataset_split, dataset_dir, dataset_label_dir):
-  """ Converts the ADE20k dataset into into tfrecord format (SSTable).
+    """ Converts the AtWork dataset into into tfrecord format (SSTable).
 
-  Args:
+    Args:
     dataset_split: Dataset split (e.g., train, val).
-    dataset_dir: Dir in which the dataset locates.
-    dataset_label_dir: Dir in which the annotations locates.
+    dataset_dir: list of directories with dataset images.
+    dataset_label_dir: list of directories with dataset annotations.
 
-  Raises:
+    Raises:
     RuntimeError: If loaded image and label have different shape.
-  """
+    """
+    img_names = []
+    seg_names = []
+    for index, directory in enumerate(dataset_dir):
+        img_n = tf.gfile.Glob(os.path.join(directory, '*.jpg'))
+        random.shuffle(img_n)
+        for f in img_n:
+            # get the filename without the extension
+            basename = os.path.basename(f).split(".")[0]
+            # cover its corresponding *_seg.png
+            seg = os.path.join(dataset_label_dir[index], basename+'.png')
+            seg_names.append(seg)
+        img_names += img_n
 
-  img_names = tf.gfile.Glob(os.path.join(dataset_dir, '*.jpg'))
-  random.shuffle(img_names)
-  seg_names = []
-  for f in img_names:
-    # get the filename without the extension
-    basename = os.path.basename(f).split(".")[0]
-    # cover its corresponding *_seg.png
-    seg = os.path.join(dataset_label_dir, basename+'.png')
-    seg_names.append(seg)
+    num_images = len(img_names)
+    num_per_shard = int(math.ceil(num_images / float(_NUM_SHARDS)))
 
-  num_images = len(img_names)
-  num_per_shard = int(math.ceil(num_images / float(_NUM_SHARDS)))
+    image_reader = build_data.ImageReader('jpeg', channels=3)
+    label_reader = build_data.ImageReader('png', channels=1)
 
-  image_reader = build_data.ImageReader('jpeg', channels=3)
-  label_reader = build_data.ImageReader('png', channels=1)
-
-  for shard_id in range(_NUM_SHARDS):
-    output_filename = os.path.join(
-        FLAGS.output_dir,
-        '%s-%05d-of-%05d.tfrecord' % (dataset_split, shard_id, _NUM_SHARDS))
-    with tf.python_io.TFRecordWriter(output_filename) as tfrecord_writer:
-      start_idx = shard_id * num_per_shard
-      end_idx = min((shard_id + 1) * num_per_shard, num_images)
-      for i in range(start_idx, end_idx):
-        sys.stdout.write('\r>> Converting image %d/%d shard %d' % (
-            i + 1, num_images, shard_id))
+    for shard_id in range(_NUM_SHARDS):
+        output_filename = os.path.join(
+                FLAGS.output_dir,
+                '%s-%05d-of-%05d.tfrecord' % (dataset_split, shard_id, _NUM_SHARDS))
+        with tf.python_io.TFRecordWriter(output_filename) as tfrecord_writer:
+            start_idx = shard_id * num_per_shard
+            end_idx = min((shard_id + 1) * num_per_shard, num_images)
+            for i in range(start_idx, end_idx):
+                sys.stdout.write('\r>> Converting image %d/%d shard %d' % (
+                    i + 1, num_images, shard_id))
+                sys.stdout.flush()
+                # Read the image.
+                image_filename = img_names[i]
+                image_data = tf.gfile.FastGFile(image_filename, 'r').read()
+                height, width = image_reader.read_image_dims(image_data)
+                # Read the semantic segmentation annotation.
+                seg_filename = seg_names[i]
+                seg_data = tf.gfile.FastGFile(seg_filename, 'r').read()
+                seg_height, seg_width = label_reader.read_image_dims(seg_data)
+                if height != seg_height or width != seg_width:
+                  raise RuntimeError('Shape mismatched between image and label.')
+                # Convert to tf example.
+                example = build_data.image_seg_to_tfexample(
+                    image_data, img_names[i], height, width, seg_data)
+                tfrecord_writer.write(example.SerializeToString())
+        sys.stdout.write('\n')
         sys.stdout.flush()
-        # Read the image.
-        image_filename = img_names[i]
-        image_data = tf.gfile.FastGFile(image_filename, 'r').read()
-        height, width = image_reader.read_image_dims(image_data)
-        # Read the semantic segmentation annotation.
-        seg_filename = seg_names[i]
-        seg_data = tf.gfile.FastGFile(seg_filename, 'r').read()
-        seg_height, seg_width = label_reader.read_image_dims(seg_data)
-        if height != seg_height or width != seg_width:
-          raise RuntimeError('Shape mismatched between image and label.')
-        # Convert to tf example.
-        example = build_data.image_seg_to_tfexample(
-            image_data, img_names[i], height, width, seg_data)
-        tfrecord_writer.write(example.SerializeToString())
-    sys.stdout.write('\n')
-    sys.stdout.flush()
 
 def main(unused_argv):
-  tf.gfile.MakeDirs(FLAGS.output_dir)
-  _convert_dataset('train', FLAGS.train_image_folder, FLAGS.train_image_label_folder)
-  _convert_dataset('val', FLAGS.val_image_folder, FLAGS.val_image_label_folder)
+    tf.gfile.MakeDirs(FLAGS.output_dir)
+    _convert_dataset('train', [FLAGS.train_image_folder], [FLAGS.train_image_label_folder])
+    _convert_dataset('val', [FLAGS.val_image_folder], [FLAGS.val_image_label_folder])
+    _convert_dataset('test', [FLAGS.test_image_folder], [FLAGS.test_image_label_folder])
+    _convert_dataset('trainVal', [FLAGS.train_image_folder, FLAGS.val_image_folder],
+                     [FLAGS.train_image_label_folder, FLAGS.val_image_label_folder])
+    _convert_dataset('trainValTest', [FLAGS.train_image_folder, FLAGS.val_image_folder,
+                                      FLAGS.test_image_folder], [FLAGS.train_image_label_folder,
+                                                                 FLAGS.val_image_label_folder,
+                                                                 FLAGS.test_image_label_folder])
 
 if __name__ == '__main__':
-  tf.app.run()
+    tf.app.run()
