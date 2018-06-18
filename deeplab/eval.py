@@ -180,7 +180,7 @@ def main(unused_argv):
 
     for index, t in enumerate(tf.unstack(category_iou_tensor)):
         slim.summaries.add_scalar_summary(
-            t, dataset.labels_to_class[index], print_summary=False)
+            t, 'class/'+dataset.labels_to_class[index], print_summary=False)
 
     class_names = tf.identity(list(dataset.labels_to_class.values()))
     class_names = tf.reshape(class_names, (dataset.num_classes, 1))

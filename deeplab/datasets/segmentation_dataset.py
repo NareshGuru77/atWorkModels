@@ -77,7 +77,7 @@ _ATWORK_SIMILAR_INFORMATION = DatasetDescriptor(
     },
     num_classes=13,
     ignore_label=255,
-    labels_to_class={0: 'background', 1: 'f/s20/40_20/40_B/G', 2: 'm20_100', 3: 'm20/30',
+    labels_to_class={0: 'background', 1: 'f_s20_40_20_40_B,G', 2: 'm20_100', 3: 'm20_30',
                      4: 'r20', 5: 'bearing_box', 6: 'bearing', 7: 'axis', 8: 'distance_tube',
                      9: 'motor', 10: 'container', 11: 'em_01', 12: 'em_02'},
 )
@@ -92,8 +92,8 @@ _ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
     },
     num_classes=15,
     ignore_label=255,
-    labels_to_class={0: 'background', 1: 'f/s20/40_20/40_B', 2: 'f/s20/40_20/40_G',
-                     3: 'm20_100', 4: 'm20/30', 5: 'r20', 6: 'bearing_box', 7: 'bearing',
+    labels_to_class={0: 'background', 1: 'f_s20_40_20_40_B', 2: 'f_s20_40_20_40_G',
+                     3: 'm20_100', 4: 'm20_30', 5: 'r20', 6: 'bearing_box', 7: 'bearing',
                      8: 'axis', 9: 'distance_tube', 10: 'motor', 11: 'container_box_blue',
                      12: 'container_box_red', 13: 'em_01', 14: 'em_02'},
 )
