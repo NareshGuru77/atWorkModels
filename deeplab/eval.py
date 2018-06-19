@@ -201,7 +201,7 @@ def main(unused_argv):
         logdir=FLAGS.eval_logdir,
         num_evals=num_batches,
         summary_op=summary_op,
-        eval_op=[metrics_to_updates.values()],
+        eval_op=list(metrics_to_updates.values()),
         max_number_of_evaluations=num_eval_iters,
         eval_interval_secs=FLAGS.eval_interval_secs,
         final_op=[confusion_matrix, category_iou])

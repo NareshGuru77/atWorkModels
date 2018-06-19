@@ -207,7 +207,7 @@ def get_model_learning_rate(
     learning_rate = tf.train.cosine_decay_restarts(
           base_learning_rate,
           global_step,
-          training_number_of_steps // 3)
+          training_number_of_steps // 6)
   else:
     raise ValueError('Unknown learning policy.')
 
