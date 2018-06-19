@@ -53,7 +53,19 @@ def main(unused_argv):
     tf.gfile.MakeDirs(FLAGS.inference_dir)
 
     g = load_graph()
+    run_meta = tf.RunMetadata()
     with g.as_default():
+        #https://stackoverflow.com/questions/45085938/tensorflow-is-there-a-way-to-measure-flops-for-a-model
+        opts = tf.profiler.ProfileOptionBuilder.float_operation()
+        flops = tf.profiler.profile(g, run_meta=run_meta, cmd='op', options=opts)
+        if flops is not None:
+            print (flops.total_float_ops)
+
+
+        # Create an object to hold the tracing data
+        #run_metadata = tf.RunMetadata()
+
+
         image_name = FLAGS.image_path.split('/')[-1]
         image_name, image_extension = image_name.split('.')
 
@@ -70,23 +82,23 @@ def main(unused_argv):
         image = cv2.resize(image, tuple(reversed(FLAGS.inference_crop_size)))
         image = np.expand_dims(image, 0)
 
-        # input_operation = g.get_operation_by_name('import/'+_INPUT_OP)
-        # output_operation = g.get_operation_by_name('import/'+_OUTPUT_OP)
+        input_operation = g.get_operation_by_name('import/'+_INPUT_OP)
+        output_operation = g.get_operation_by_name('import/'+_OUTPUT_OP)
 
-        input_tensor = g.get_tensor_by_name('import/' + _INPUT_OP + ':0')
-        output_tensor = g.get_tensor_by_name('import/' + _OUTPUT_OP + ':0')
+        # input_tensor = g.get_tensor_by_name('import/' + _INPUT_OP + ':0')
+        # output_tensor = g.get_tensor_by_name('import/' + _OUTPUT_OP + ':0')
 
         with tf.Session(graph=g) as sess:
 
-            # semantic_predictions = sess.run(output_operation.outputs[0],
-            #                                 feed_dict={
-            #     input_operation.outputs[0]: image
-            # })
-
-            semantic_predictions = sess.run(output_tensor,
+            semantic_predictions = sess.run(output_operation.outputs[0],
                                             feed_dict={
-                                                input_tensor: image
-                                            })
+                input_operation.outputs[0]: image
+            })
+
+            # semantic_predictions = sess.run(output_tensor,
+            #                                 feed_dict={
+            #                                     input_tensor: image
+            #                                 })
 
         result = np.array(semantic_predictions, dtype=np.uint8)
         result = np.squeeze(result)
