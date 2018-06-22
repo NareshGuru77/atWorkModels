@@ -16,47 +16,37 @@
 import math
 import os
 import random
-import string
 import sys
 import build_data
 import tensorflow as tf
 
-FLAGS = tf.app.flags.FLAGS
+flags = tf.app.flags
 
-tf.app.flags.DEFINE_string(
-    'train_image_folder',
-    '../atWorkData/final_data/real_augmented/training/image',
-    'Folder containing training images')
-tf.app.flags.DEFINE_string(
-    'train_image_label_folder',
-    '../atWorkData/final_data/real_augmented/training/label_size_invariant',
-    'Folder containing annotations for training images')
+FLAGS = flags.FLAGS
 
-tf.app.flags.DEFINE_string(
-    'val_image_folder',
-    '../atWorkData/final_data/real_augmented/validation/image',
-    'Folder containing validation images')
+flags.DEFINE_string('train_image_folder', None,
+                    'Folder containing training images')
 
-tf.app.flags.DEFINE_string(
-    'val_image_label_folder',
-    '../atWorkData/final_data/real_augmented/validation/label_size_invariant',
-    'Folder containing annotations for validation')
+flags.DEFINE_string('train_image_label_folder', None,
+                    'Folder containing annotations for training images')
 
-tf.app.flags.DEFINE_string(
-    'test_image_folder',
-    '../atWorkData/final_data/real_augmented/test/image',
-    'Folder containing test images')
+flags.DEFINE_string('val_image_folder', None,
+                    'Folder containing validation images')
 
-tf.app.flags.DEFINE_string(
-    'test_image_label_folder',
-    '../atWorkData/final_data/real_augmented/test/label_size_invariant',
-    'Folder containing annotations for test')
+flags.DEFINE_string('val_image_label_folder', None,
+                    'Folder containing annotations for validation')
 
-tf.app.flags.DEFINE_string(
-    'output_dir', '../atWorkData/final_data/atWork_size_invariant/tfrecord',
-    'Path to save converted SSTable of Tensorflow example')
+flags.DEFINE_string('test_image_folder', None,
+                    'Folder containing test images')
+
+flags.DEFINE_string('test_image_label_folder', None,
+                    'Folder containing annotations for test')
+
+flags.DEFINE_string('output_dir', None,
+                    'Path to save converted SSTable of Tensorflow example')
 
 _NUM_SHARDS = 4
+
 
 def _convert_dataset(dataset_split, dataset_dir, dataset_label_dir):
     """ Converts the AtWork dataset into into tfrecord format (SSTable).
@@ -108,13 +98,14 @@ def _convert_dataset(dataset_split, dataset_dir, dataset_label_dir):
                 seg_data = tf.gfile.FastGFile(seg_filename, 'r').read()
                 seg_height, seg_width = label_reader.read_image_dims(seg_data)
                 if height != seg_height or width != seg_width:
-                  raise RuntimeError('Shape mismatched between image and label.')
+                    raise RuntimeError('Shape mismatched between image and label.')
                 # Convert to tf example.
                 example = build_data.image_seg_to_tfexample(
                     image_data, img_names[i], height, width, seg_data)
                 tfrecord_writer.write(example.SerializeToString())
         sys.stdout.write('\n')
         sys.stdout.flush()
+
 
 def main(unused_argv):
     tf.gfile.MakeDirs(FLAGS.output_dir)
@@ -129,4 +120,11 @@ def main(unused_argv):
                                                                  FLAGS.test_image_label_folder])
 
 if __name__ == '__main__':
+    flags.mark_flag_as_required('train_image_folder')
+    flags.mark_flag_as_required('train_image_label_folder')
+    flags.mark_flag_as_required('val_image_folder')
+    flags.mark_flag_as_required('val_image_label_folder')
+    flags.mark_flag_as_required('test_image_folder')
+    flags.mark_flag_as_required('test_image_label_folder')
+    flags.mark_flag_as_required('output_dir')
     tf.app.run()
