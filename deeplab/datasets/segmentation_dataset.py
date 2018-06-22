@@ -67,7 +67,7 @@ _ATWORK_BINARY_INFORMATION = DatasetDescriptor(
     labels_to_class={0: 'background', 1: 'foreground'},
 )
 
-_ATWORK_SIMILAR_INFORMATION = DatasetDescriptor(
+_ATWORK_SIMILAR_SHAPES_INFORMATION = DatasetDescriptor(
     splits_to_sizes = {
         'train': 7500,
         'val': 942,
@@ -118,10 +118,10 @@ _ATWORK_FULL_INFORMATION = DatasetDescriptor(
 
 
 _DATASETS_INFORMATION = {
-    'atWork_binary': _ATWORK_SIMILAR_INFORMATION,
-    'atWork_similar': _ATWORK_SIMILAR_INFORMATION,
-    'atWork_size_invariant': _ATWORK_SIMILAR_INFORMATION,
-    'atWork_full': _ATWORK_SIMILAR_INFORMATION,
+    'atWork_binary': _ATWORK_BINARY_INFORMATION,
+    'atWork_similar': _ATWORK_SIMILAR_SHAPES_INFORMATION,
+    'atWork_size_invariant': _ATWORK_SIZE_INVARIANT_INFORMATION,
+    'atWork_full': _ATWORK_FULL_INFORMATION,
 }
 
 # Default file pattern of TFRecord of TensorFlow Example.
