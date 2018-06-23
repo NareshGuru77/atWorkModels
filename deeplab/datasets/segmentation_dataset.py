@@ -119,7 +119,7 @@ _ATWORK_FULL_INFORMATION = DatasetDescriptor(
 
 _DATASETS_INFORMATION = {
     'atWork_binary': _ATWORK_BINARY_INFORMATION,
-    'atWork_similar': _ATWORK_SIMILAR_SHAPES_INFORMATION,
+    'atWork_similar_shapes': _ATWORK_SIMILAR_SHAPES_INFORMATION,
     'atWork_size_invariant': _ATWORK_SIZE_INVARIANT_INFORMATION,
     'atWork_full': _ATWORK_FULL_INFORMATION,
 }
