@@ -38,6 +38,24 @@ dataset = slim.dataset
 tfexample_decoder = slim.tfexample_decoder
 
 
+_LABEL_DEF_BINARY = {0: 'background', 1: 'foreground'}
+
+_LABEL_DEF_SIMILAR_SHAPES = {0: 'background', 1: 'f_s20_40_20_40_B,G', 2: 'm20_100', 3: 'm20_30',
+                     4: 'r20', 5: 'bearing_box', 6: 'bearing', 7: 'axis', 8: 'distance_tube',
+                     9: 'motor', 10: 'container', 11: 'em_01', 12: 'em_02'}
+
+_LABEL_DEF_SIZE_INVARIANT = {0: 'background', 1: 'f_s20_40_20_40_B', 2: 'f_s20_40_20_40_G',
+                     3: 'm20_100', 4: 'm20_30', 5: 'r20', 6: 'bearing_box', 7: 'bearing',
+                     8: 'axis', 9: 'distance_tube', 10: 'motor', 11: 'container_box_blue',
+                     12: 'container_box_red', 13: 'em_01', 14: 'em_02'}
+
+_LABEL_DEF_FULL = {0: 'background', 1: 'f20_20_B', 2: 's40_40_B', 3: 'f20_20_G',
+                     4: 's40_40_G', 5: 'm20_100', 6: 'm20', 7: 'm30', 8: 'r20',
+                     9: 'bearing_box_ax01', 10: 'bearing', 11: 'axis', 12: 'distance_tube',
+                     13: 'motor', 14: 'container_box_blue', 15: 'container_box_red',
+                     16: 'bearing_box_ax16', 17: 'em_01', 18: 'em_02'}
+
+
 _ITEMS_TO_DESCRIPTIONS = {
     'image': 'A color image of varying height and width.',
     'labels_class': ('A semantic segmentation label whose size matches image.'
@@ -59,12 +77,11 @@ _ATWORK_BINARY_INFORMATION = DatasetDescriptor(
         'train': 7500,
         'val': 942,
         'test': 939,
-        'trainVal': 8442,
         'trainValTest': 9381,
     },
     num_classes=2,
     ignore_label=255,
-    labels_to_class={0: 'background', 1: 'foreground'},
+    labels_to_class=_LABEL_DEF_BINARY,
 )
 
 _ATWORK_SIMILAR_SHAPES_INFORMATION = DatasetDescriptor(
@@ -72,14 +89,11 @@ _ATWORK_SIMILAR_SHAPES_INFORMATION = DatasetDescriptor(
         'train': 7500,
         'val': 942,
         'test': 939,
-        'trainVal': 8442,
         'trainValTest': 9381,
     },
     num_classes=13,
     ignore_label=255,
-    labels_to_class={0: 'background', 1: 'f_s20_40_20_40_B,G', 2: 'm20_100', 3: 'm20_30',
-                     4: 'r20', 5: 'bearing_box', 6: 'bearing', 7: 'axis', 8: 'distance_tube',
-                     9: 'motor', 10: 'container', 11: 'em_01', 12: 'em_02'},
+    labels_to_class=_LABEL_DEF_SIMILAR_SHAPES,
 )
 
 _ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
@@ -87,15 +101,11 @@ _ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
         'train': 7500,
         'val': 942,
         'test': 939,
-        'trainVal': 8442,
         'trainValTest': 9381,
     },
     num_classes=15,
     ignore_label=255,
-    labels_to_class={0: 'background', 1: 'f_s20_40_20_40_B', 2: 'f_s20_40_20_40_G',
-                     3: 'm20_100', 4: 'm20_30', 5: 'r20', 6: 'bearing_box', 7: 'bearing',
-                     8: 'axis', 9: 'distance_tube', 10: 'motor', 11: 'container_box_blue',
-                     12: 'container_box_red', 13: 'em_01', 14: 'em_02'},
+    labels_to_class=_LABEL_DEF_SIZE_INVARIANT,
 )
 
 _ATWORK_FULL_INFORMATION = DatasetDescriptor(
@@ -103,25 +113,134 @@ _ATWORK_FULL_INFORMATION = DatasetDescriptor(
         'train': 7500,
         'val': 942,
         'test': 939,
-        'trainVal': 8442,
         'trainValTest': 9381,
     },
     num_classes=19,
     ignore_label=255,
-    labels_to_class={0: 'background', 1: 'f20_20_B', 2: 's40_40_B', 3: 'f20_20_G',
-                     4: 's40_40_G', 5: 'm20_100', 6: 'm20', 7: 'm30', 8: 'r20',
-                     9: 'bearing_box_ax01', 10: 'bearing', 11: 'axis', 12: 'distance_tube',
-                     13: 'motor', 14: 'container_box_blue', 15: 'container_box_red',
-                     16: 'bearing_box_ax16', 17: 'em_01', 18: 'em_02'}
-,
+    labels_to_class=_LABEL_DEF_FULL,
 )
 
+_ATWORK_REAL_BINARY_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_real': 396,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=2,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_BINARY,
+)
+
+_ATWORK_REAL_SHAPES_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_real': 396,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=13,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_SIMILAR_SHAPES,
+)
+
+_ATWORK_REAL_SIZE_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_real': 396,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=15,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_SIZE_INVARIANT,
+)
+
+_ATWORK_REAL_FULL_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_real': 396,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=19,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_FULL,
+)
+
+_ATWORK_AUG_BINARY_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_aug': 7104,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=2,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_BINARY,
+)
+
+_ATWORK_AUG_SHAPES_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_aug': 7104,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=13,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_SIMILAR_SHAPES,
+)
+
+_ATWORK_AUG_SIZE_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_aug': 7104,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=15,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_SIZE_INVARIANT,
+)
+
+_ATWORK_AUG_FULL_INFORMATION = DatasetDescriptor(
+    splits_to_sizes = {
+        'train_aug': 7104,
+        'val_real': 72,
+        'test_real': 69,
+        'val_aug': 870,
+        'test_aug': 870,
+    },
+    num_classes=19,
+    ignore_label=255,
+    labels_to_class=_LABEL_DEF_FULL,
+)
 
 _DATASETS_INFORMATION = {
     'atWork_binary': _ATWORK_BINARY_INFORMATION,
     'atWork_similar_shapes': _ATWORK_SIMILAR_SHAPES_INFORMATION,
     'atWork_size_invariant': _ATWORK_SIZE_INVARIANT_INFORMATION,
     'atWork_full': _ATWORK_FULL_INFORMATION,
+    'atWork_real_binary': _ATWORK_REAL_BINARY_INFORMATION,
+    'atWork_real_shape': _ATWORK_REAL_SHAPES_INFORMATION,
+    'atWork_real_size': _ATWORK_REAL_SIZE_INFORMATION,
+    'atWork_real_full': _ATWORK_REAL_FULL_INFORMATION,
+    'atWork_aug_binary': _ATWORK_AUG_BINARY_INFORMATION,
+    'atWork_aug_shape': _ATWORK_AUG_SHAPES_INFORMATION,
+    'atWork_aug_size': _ATWORK_AUG_SIZE_INFORMATION,
+    'atWork_aug_full': _ATWORK_AUG_FULL_INFORMATION,
+    'atWork_white_binary': _ATWORK_BINARY_INFORMATION,
+    'atWork_white_shape': _ATWORK_SIMILAR_SHAPES_INFORMATION,
+    'atWork_white_size': _ATWORK_SIZE_INVARIANT_INFORMATION,
+    'atWork_white_full': _ATWORK_FULL_INFORMATION,
 }
 
 # Default file pattern of TFRecord of TensorFlow Example.

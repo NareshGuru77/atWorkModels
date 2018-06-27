@@ -112,8 +112,6 @@ def main(unused_argv):
     _convert_dataset('train', [FLAGS.train_image_folder], [FLAGS.train_image_label_folder])
     _convert_dataset('val', [FLAGS.val_image_folder], [FLAGS.val_image_label_folder])
     _convert_dataset('test', [FLAGS.test_image_folder], [FLAGS.test_image_label_folder])
-    _convert_dataset('trainVal', [FLAGS.train_image_folder, FLAGS.val_image_folder],
-                     [FLAGS.train_image_label_folder, FLAGS.val_image_label_folder])
     _convert_dataset('trainValTest', [FLAGS.train_image_folder, FLAGS.val_image_folder,
                                       FLAGS.test_image_folder], [FLAGS.train_image_label_folder,
                                                                  FLAGS.val_image_label_folder,
