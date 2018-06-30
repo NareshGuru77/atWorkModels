@@ -30,6 +30,7 @@ References:
 import collections
 import os.path
 import tensorflow as tf
+import numpy as np
 
 slim = tf.contrib.slim
 
@@ -62,13 +63,48 @@ _ITEMS_TO_DESCRIPTIONS = {
                      'Its values range from 0 (background) to num_classes.'),
 }
 
+
+def get_weight_list(labels_to_class, cls_to_weight):
+    weight_list = np.zeros(len(labels_to_class))
+    for label, cls in labels_to_class.items():
+        weight_list[label] = cls_to_weight[cls]
+
+    return list(weight_list)
+
+
+def get_class_weights(labels_to_class, cls_to_percentage, set_background_weight=None):
+
+    cls_to_weight = {key: round(1 / (100 * value), 4)
+                     for key, value in cls_to_percentage.items()}
+
+    normalizer = sum(cls_to_weight.values()) - cls_to_weight['background']
+
+    if set_background_weight is None:
+        background_weight = cls_to_weight['background']
+    else:
+        background_weight = set_background_weight
+
+    cls_to_weight = {key: round(value * (1 - background_weight) / normalizer, 4)
+                     if key is not 'background'
+                     else background_weight for key, value in cls_to_weight.items()}
+
+    if abs(1. - sum(cls_to_weight.values())) > 1e-3:
+        raise ValueError(
+            'The sum of weights is {}... The weights have not been normalized...'.format(
+                sum(cls_to_weight.values())))
+
+    return get_weight_list(labels_to_class, cls_to_weight)
+
+
 # Named tuple to describe the dataset properties.
 DatasetDescriptor = collections.namedtuple(
     'DatasetDescriptor',
     ['splits_to_sizes',   # Splits of the dataset into training, val, and test.
      'num_classes',   # Number of semantic classes.
      'ignore_label',  # Ignore label value.
-     'labels_to_class',
+     'labels_to_class',  # dictionary with labels as keys and class names as values.
+     'cls_to_percentage',
+     'get_class_weights',
     ]
 )
 
@@ -82,6 +118,8 @@ _ATWORK_BINARY_INFORMATION = DatasetDescriptor(
     num_classes=2,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_BINARY,
+    cls_to_percentage={'background': 86.2141, 'foreground': 13.7859},
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_SIMILAR_SHAPES_INFORMATION = DatasetDescriptor(
@@ -94,6 +132,11 @@ _ATWORK_SIMILAR_SHAPES_INFORMATION = DatasetDescriptor(
     num_classes=13,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_SIMILAR_SHAPES,
+    cls_to_percentage={'background': 86.2141, 'f_s20_40_20_40_B_G': 1.8809, 'm20_100': 0.4577,
+                       'm20_30': 0.5902, 'r20': 0.3648, 'bearing_box': 1.4311, 'bearing': 0.2526,
+                       'axis': 0.4214, 'distance_tube': 0.2321, 'motor': 0.486, 'container': 4.8828,
+                       'em_01': 1.224, 'em_02': 1.5624},
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
@@ -106,6 +149,12 @@ _ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
     num_classes=15,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_SIZE_INVARIANT,
+    cls_to_percentage={'background': 86.2141, 'f_s20_40_20_40_B': 0.7166, 'f_s20_40_20_40_G': 1.1643,
+                       'm20_100': 0.4577, 'm20_30': 0.5902, 'r20': 0.3648, 'bearing_box': 1.4311,
+                       'bearing': 0.2526, 'axis': 0.4214, 'distance_tube': 0.2321, 'motor': 0.486,
+                       'container_box_blue': 2.6529, 'container_box_red': 2.2299, 'em_01': 1.224,
+                       'em_02': 1.5624},
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_FULL_INFORMATION = DatasetDescriptor(
@@ -118,6 +167,13 @@ _ATWORK_FULL_INFORMATION = DatasetDescriptor(
     num_classes=19,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_FULL,
+    cls_to_percentage={'background': 86.2141, 'f20_20_B': 0.2948, 's40_40_B': 0.4218,
+                       'f20_20_G': 0.2683, 's40_40_G': 0.896, 'm20_100': 0.4577, 'm20': 0.2981,
+                       'm30': 0.2921, 'r20': 0.3648, 'bearing_box_ax01': 0.8653, 'bearing': 0.2526,
+                       'axis': 0.4214, 'distance_tube': 0.2321, 'motor': 0.486, 'container_box_blue': 2.6529,
+                       'container_box_red': 2.2299, 'bearing_box_ax16': 0.5657, 'em_01': 1.224, 'em_02': 1.5624}
+,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_REAL_BINARY_INFORMATION = DatasetDescriptor(
@@ -131,6 +187,8 @@ _ATWORK_REAL_BINARY_INFORMATION = DatasetDescriptor(
     num_classes=2,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_BINARY,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_REAL_SHAPES_INFORMATION = DatasetDescriptor(
@@ -144,6 +202,8 @@ _ATWORK_REAL_SHAPES_INFORMATION = DatasetDescriptor(
     num_classes=13,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_SIMILAR_SHAPES,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_REAL_SIZE_INFORMATION = DatasetDescriptor(
@@ -157,6 +217,8 @@ _ATWORK_REAL_SIZE_INFORMATION = DatasetDescriptor(
     num_classes=15,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_SIZE_INVARIANT,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_REAL_FULL_INFORMATION = DatasetDescriptor(
@@ -170,6 +232,8 @@ _ATWORK_REAL_FULL_INFORMATION = DatasetDescriptor(
     num_classes=19,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_FULL,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_AUG_BINARY_INFORMATION = DatasetDescriptor(
@@ -183,6 +247,8 @@ _ATWORK_AUG_BINARY_INFORMATION = DatasetDescriptor(
     num_classes=2,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_BINARY,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_AUG_SHAPES_INFORMATION = DatasetDescriptor(
@@ -196,6 +262,8 @@ _ATWORK_AUG_SHAPES_INFORMATION = DatasetDescriptor(
     num_classes=13,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_SIMILAR_SHAPES,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_AUG_SIZE_INFORMATION = DatasetDescriptor(
@@ -209,6 +277,8 @@ _ATWORK_AUG_SIZE_INFORMATION = DatasetDescriptor(
     num_classes=15,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_SIZE_INVARIANT,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _ATWORK_AUG_FULL_INFORMATION = DatasetDescriptor(
@@ -222,6 +292,8 @@ _ATWORK_AUG_FULL_INFORMATION = DatasetDescriptor(
     num_classes=19,
     ignore_label=255,
     labels_to_class=_LABEL_DEF_FULL,
+    cls_to_percentage=None,
+    get_class_weights=get_class_weights,
 )
 
 _DATASETS_INFORMATION = {
@@ -273,6 +345,8 @@ def get_dataset(dataset_name, split_name, dataset_dir):
   num_classes = _DATASETS_INFORMATION[dataset_name].num_classes
   ignore_label = _DATASETS_INFORMATION[dataset_name].ignore_label
   labels_to_class = _DATASETS_INFORMATION[dataset_name].labels_to_class
+  cls_to_percentage = _DATASETS_INFORMATION[dataset_name].cls_to_percentage
+  get_class_weights = _DATASETS_INFORMATION[dataset_name].get_class_weights
 
   file_pattern = _FILE_PATTERN
   file_pattern = os.path.join(dataset_dir, file_pattern % split_name)
@@ -320,5 +394,7 @@ def get_dataset(dataset_name, split_name, dataset_dir):
       ignore_label=ignore_label,
       num_classes=num_classes,
       labels_to_class=labels_to_class,
+      cls_to_percentage=cls_to_percentage,
+      get_class_weights=get_class_weights,
       name=dataset_name,
       multi_label=True)

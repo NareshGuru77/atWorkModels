@@ -162,8 +162,15 @@ flags.DEFINE_string('train_split', 'train',
 
 flags.DEFINE_string('dataset_dir', None, 'Where the dataset reside.')
 
+# Flags for class balancing of loss function.
+flags.DEFINE_boolean('enable_class_balancing', False,
+                     'Enable class balancing in loss function.')
 
-def _build_deeplab(inputs_queue, outputs_to_num_classes, ignore_label):
+flags.DEFINE_float('background_weight', None,
+                     'Weight for the background class.')
+
+
+def _build_deeplab(inputs_queue, outputs_to_num_classes, dataset):
   """Builds a clone of DeepLab.
 
   Args:
@@ -171,7 +178,7 @@ def _build_deeplab(inputs_queue, outputs_to_num_classes, ignore_label):
     outputs_to_num_classes: A map from output type to the number of classes.
       For example, for the task of semantic segmentation with 21 semantic
       classes, we would have outputs_to_num_classes['semantic'] = 21.
-    ignore_label: Ignore label.
+    dataset: slim dataset object containing dataset information.
 
   Returns:
     A map of maps from output_type (e.g., semantic prediction) to a
@@ -211,10 +218,12 @@ def _build_deeplab(inputs_queue, outputs_to_num_classes, ignore_label):
         outputs_to_scales_to_logits[output],
         samples[common.LABEL],
         num_classes,
-        ignore_label,
+        dataset,
         loss_weight=1.0,
         upsample_logits=FLAGS.upsample_logits,
-        scope=output)
+        scope=output,
+        enable_class_balancing= FLAGS.enable_class_balancing,
+        background_weight=FLAGS.background_weight)
 
   return outputs_to_scales_to_logits
 
@@ -268,7 +277,7 @@ def main(unused_argv):
       model_fn = _build_deeplab
       model_args = (inputs_queue, {
           common.OUTPUT_TYPE: dataset.num_classes
-      }, dataset.ignore_label)
+      }, dataset)
       clones = model_deploy.create_clones(config, model_fn, args=model_args)
 
       # Gather update_ops from the first clone. These contain, for example,

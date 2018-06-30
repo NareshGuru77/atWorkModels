@@ -24,10 +24,13 @@ slim = tf.contrib.slim
 def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
                                                   labels,
                                                   num_classes,
-                                                  ignore_label,
+                                                  dataset,
                                                   loss_weight=1.0,
                                                   upsample_logits=True,
-                                                  scope=None):
+                                                  scope=None,
+                                                  enable_class_balancing=False,
+                                                  background_weight=None
+                                                  ):
   """Adds softmax cross entropy loss for logits of each scale.
 
   Args:
@@ -62,22 +65,30 @@ def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
           labels, tf.shape(logits)[1:3], align_corners=True)
 
     scaled_labels = tf.reshape(scaled_labels, shape=[-1])
-    class_weights = tf.constant([0.015, 0.158, 0.492, 0.533, 0.97, 0.22, 1.406, 0.854, 4.536, 0.352, 0.064, 0.233, 0.168])
-    weights = tf.gather(class_weights, scaled_labels)
-    # not_ignore_mask = tf.to_float(tf.not_equal(scaled_labels,
-    #                                            ignore_label)) * loss_weight
+
     one_hot_labels = slim.one_hot_encoding(
         scaled_labels, num_classes, on_value=1.0, off_value=0.0)
-    # class_weights = tf.constant(
-    #     [0.3, 0.0118, 0.0484, 0.0337, 0.0562, 0.0217, 0.0959, 0.0729, 0.2901, 0.0315, 0.014, 0.0075, 0.0164])
-    # class_weights = tf.reshape(class_weights, shape=[1, num_classes])
-    # weights = tf.multiply(one_hot_labels, class_weights)
+
+    if enable_class_balancing:
+        tf.logging.info('Using class balancing for loss function.')
+        if dataset.cls_to_percentage is None:
+            raise ValueError('Class balancing for {} currently not supported'.format(
+                                            dataset.name))
+        if not (0.1 <= background_weight <= 0.9 or background_weight is None):
+            raise ValueError('Backgrounds weight not in range [0.1,0.9]')
+        class_weights = dataset.get_class_weights(dataset.labels_to_class,
+                                                  dataset.cls_to_percentage,
+                                                  set_background_weight=background_weight)
+        class_weights = tf.constant(class_weights)
+        weights = tf.gather(class_weights, scaled_labels)
+    else:
+        weights = tf.to_float(tf.not_equal(scaled_labels,
+                                           dataset.ignore_label)) * loss_weight
     tf.losses.softmax_cross_entropy(
         one_hot_labels,
         tf.reshape(logits, shape=[-1, num_classes]),
         weights=weights,
         scope=loss_scope)
-    #tf.losses.softmax_cross_entropy(weights, tf.reshape(logits, (-1, num_classes)))
 
 
 def get_model_init_fn(train_logdir,
