@@ -74,7 +74,7 @@ def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
         if dataset.cls_to_percentage is None:
             raise ValueError('Class balancing for {} currently not supported'.format(
                                             dataset.name))
-        if not (0.1 <= background_weight <= 0.9 or background_weight is None):
+        if not (background_weight is None or 0.1 <= background_weight <= 0.9):
             raise ValueError('Backgrounds weight not in range [0.1,0.9]')
         class_weights = dataset.get_class_weights(dataset.labels_to_class,
                                                   dataset.cls_to_percentage,
