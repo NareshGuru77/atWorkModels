@@ -33,13 +33,21 @@ def main(unused_argv):
     tf.gfile.MakeDirs(FLAGS.eval_logdir)
     tf.logging.info('Evaluating on %s set', FLAGS.eval_split)
 
+    if FLAGS.eval_batch_size != 1:
+        raise ValueError('Batch size {} is not allowed. '
+                         'Inference graph can only be '
+                         'evaluated image by image.'.format(
+                            FLAGS.eval_batch_size))
+
+    batch_size = 1
+
     g = tf.Graph()
     with g.as_default():
 
         samples = input_generator.get(
               dataset,
               FLAGS.eval_crop_size,
-              FLAGS.eval_batch_size,
+              batch_size,
               min_resize_value=FLAGS.min_resize_value,
               max_resize_value=FLAGS.max_resize_value,
               resize_factor=FLAGS.resize_factor,
@@ -59,7 +67,7 @@ def main(unused_argv):
         predictions = g.get_tensor_by_name('import/' + _OUTPUT_TENSOR)
         predictions = tf.reshape(predictions, shape=[-1])
 
-        (num_batches,
+        (_,
          summary_op,
          metrics_to_updates,
          confusion_matrix,
@@ -79,9 +87,11 @@ def main(unused_argv):
         with sv.managed_session(start_standard_services=False) as sess:
             sv.start_queue_runners(sess)
 
-            for batch in range(num_batches):
-                if (batch + 1) % log_steps == 0 or batch == num_batches - 1:
-                    tf.logging.info('Evaluation [%d/%d]', batch + 1, num_batches)
+            for image_number in range(dataset.num_samples):
+                if ((image_number + 1) % log_steps == 0 or
+                        image_number == dataset.num_samples - 1):
+                    tf.logging.info('Evaluation [%d/%d]', image_number + 1,
+                                    dataset.num_samples)
 
                 sess.run([samples[common.IMAGE], metrics_to_updates.values()])
 
