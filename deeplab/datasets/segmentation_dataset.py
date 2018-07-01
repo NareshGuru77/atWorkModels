@@ -112,6 +112,7 @@ _ATWORK_BINARY_INFORMATION = DatasetDescriptor(
     splits_to_sizes = {
         'train': 7500,
         'val': 942,
+        'val_real': 72,
         'test': 939,
         'trainValTest': 9381,
     },
@@ -126,6 +127,7 @@ _ATWORK_SIMILAR_SHAPES_INFORMATION = DatasetDescriptor(
     splits_to_sizes = {
         'train': 7500,
         'val': 942,
+        'val_real': 72,
         'test': 939,
         'trainValTest': 9381,
     },
@@ -143,6 +145,7 @@ _ATWORK_SIZE_INVARIANT_INFORMATION = DatasetDescriptor(
     splits_to_sizes = {
         'train': 7500,
         'val': 942,
+        'val_real': 72,
         'test': 939,
         'trainValTest': 9381,
     },
@@ -161,6 +164,7 @@ _ATWORK_FULL_INFORMATION = DatasetDescriptor(
     splits_to_sizes = {
         'train': 7500,
         'val': 942,
+        'val_real': 72,
         'test': 939,
         'trainValTest': 9381,
     },
