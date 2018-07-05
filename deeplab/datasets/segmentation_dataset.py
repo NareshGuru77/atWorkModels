@@ -41,7 +41,7 @@ tfexample_decoder = slim.tfexample_decoder
 
 _LABEL_DEF_BINARY = {0: 'background', 1: 'foreground'}
 
-_LABEL_DEF_SIMILAR_SHAPES = {0: 'background', 1: 'f_s20_40_20_40_B,G', 2: 'm20_100', 3: 'm20_30',
+_LABEL_DEF_SIMILAR_SHAPES = {0: 'background', 1: 'f_s20_40_20_40_B_G', 2: 'm20_100', 3: 'm20_30',
                      4: 'r20', 5: 'bearing_box', 6: 'bearing', 7: 'axis', 8: 'distance_tube',
                      9: 'motor', 10: 'container', 11: 'em_01', 12: 'em_02'}
 
@@ -64,7 +64,13 @@ _ITEMS_TO_DESCRIPTIONS = {
 }
 
 
+def get_label_def(dataset):
+
+    return _DATASETS_INFORMATION[dataset].labels_to_class
+
+
 def get_weight_list(labels_to_class, cls_to_weight):
+
     weight_list = np.zeros(len(labels_to_class))
     for label, cls in labels_to_class.items():
         weight_list[label] = cls_to_weight[cls]
