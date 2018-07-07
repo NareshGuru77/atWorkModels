@@ -9,6 +9,7 @@ import os
 import seaborn as sns
 import cycler
 import matplotlib as mpl
+import operator
 
 flags = tf.app.flags
 
@@ -22,6 +23,9 @@ flags.DEFINE_multi_string('events_dir', None,
 
 flags.DEFINE_integer('final_step', 30000,
                      'Final step of logs in the event file.')
+
+flags.DEFINE_string('metric_to_plot', 'confusion_matrix',
+                    'can be miou, class_iou, confusion_matrix')
 
 colormap = np.asarray([[75, 25, 230], [75, 180, 60],
                        [25, 225, 255], [200, 130, 0], [48, 130, 245],
@@ -54,7 +58,7 @@ def get_results(events_path, class_names, cls_to_iou):
                                                confusion_rc_len))
                 confusion_matrix = confusion_string[:, 1:confusion_rc_len][
                                    1:confusion_rc_len, :]
-                confusion_matrix = np.array(confusion_matrix, dtype=np.float32)
+                confusion_matrix = np.array(confusion_matrix, dtype=np.float64)
 
             if v.tag == 'miou_1.0':
                 miou.append(v.simple_value * 100.)
@@ -64,20 +68,54 @@ def get_results(events_path, class_names, cls_to_iou):
     return step, miou, cls_to_iou, confusion_matrix, confusion_string
 
 
-def plot_class_ious(step, cls_to_iou, set_fonts, label_def):
+def plot_class_ious(step, cls_to_iou, set_fonts, label_def,
+                    cls_to_percentage):
 
     plot_objs = []
 
-    for index, (key, values) in enumerate(cls_to_iou.items()):
-        values = savgol_filter(values, 7, 3)
-        pl, = plt.plot(step, values, label=key,
-                      c=np.flip(colormap[index], 0)/255.)
-        plot_objs.append(pl)
+    cls_to_iou = {key.split('/')[-1]: value[-1]
+                  for key, value in cls_to_iou.items()}
+
+    cls_to_iou.pop('background', None)
+    cls_to_percentage.pop('background', None)
+
+    max_class_iou = np.sum(cls_to_iou.values())
+    cls_to_iou = {key: value/max_class_iou
+                 for key, value in cls_to_iou.items()}
+
+    max_percentage = np.sum(cls_to_percentage.values())
+    cls_to_percentage = {key: value/max_percentage
+                      for key, value in cls_to_percentage.items()}
+
+    sorted_classes = np.array(sorted(cls_to_percentage.items(),
+                            key=operator.itemgetter(1)))[:,0]
+
+    iou_vals = [cls_to_iou[cls_iou] for
+                cls_iou in sorted_classes]
+    percentage_vals = [cls_to_percentage[cls_iou] for
+                       cls_iou in sorted_classes]
+
+    x = np.arange(0, len(sorted_classes))
+    plt.bar(x + 0.3, iou_vals, width=0.3, zorder=3, label='IOU')
+    plt.bar(x, percentage_vals, width=0.3,
+            align='center', zorder=3, label='Percentage')
+    plt.xticks(x, sorted_classes, rotation=80)
+    plt.grid(zorder=0, axis='y')
+
+    # plt.bar(cls_to_iou.keys(), cls_to_iou.values())
+    # plt.bar(cls_to_percentage.keys(), cls_to_percentage.values())
+
+    # for index, (key, values) in enumerate(cls_to_iou.items()):
+    #     values = savgol_filter(values, 7, 3)
+    #     pl, = plt.plot(step, values, label=key,
+    #                   c=np.flip(colormap[index], 0)/255.)
+    #     plot_objs.append(pl)
 
     plt.tick_params(axis='both', which='major', labelsize=set_fonts)
-    plt.xlabel('Number of training steps', fontsize=set_fonts, labelpad=12)
-    plt.ylabel('Class IOU (%)', fontsize=set_fonts)
-    plt.legend(plot_objs, label_def.values(), fontsize=set_fonts, loc=4)
+    # plt.xlabel('Number of training steps', fontsize=set_fonts, labelpad=12)
+    plt.ylabel('Normalized values', fontsize=set_fonts)
+    #plt.legend(plot_objs, label_def.values(), fontsize=set_fonts, loc=4)
+    plt.legend()
     plt.tight_layout()
     plt.show()
 
@@ -114,16 +152,19 @@ def plot_mious(miou_list, step_list, labels_list, set_fonts,
 
 def plot_confusion(confusion_matrix, label_def):
 
+    fig, ax = plt.subplots()
     correct_predictions = np.diag(confusion_matrix)
     second_max = sorted(correct_predictions)[-2]
     confusion_matrix = confusion_matrix/(
         np.sum(confusion_matrix, axis=1)[np.newaxis].T)
-    #confusion_matrix = np.round(confusion_matrix, 2)
+    confusion_matrix = confusion_matrix * 100
+    confusion_matrix = np.round(confusion_matrix, 2)
 
     sns.heatmap(confusion_matrix, xticklabels=label_def.values(),
-                yticklabels=label_def.values(), vmin=0, vmax=0.6,
+                yticklabels=label_def.values(), vmin=0, vmax=50,
                 cmap=sns.color_palette('Blues', n_colors=30),
                 annot=True, annot_kws={"size": 12})
+    ax.xaxis.tick_top()
     plt.xticks(rotation=80)
     plt.tight_layout()
     plt.show()
@@ -136,7 +177,9 @@ def main(unused_argv):
     num_plots = 4
 
     if len(FLAGS.dataset) != len(FLAGS.events_dir):
-        raise ValueError()
+        raise ValueError('Number of datasets {} is not equal to'
+                         'number of events {}.'.format(FLAGS.dataset,
+                                                       FLAGS.events_dir))
 
     colormap = plt.cm.get_cmap('Dark2')
     color = colormap(np.linspace(0, 1, num_plots))
@@ -160,20 +203,30 @@ def main(unused_argv):
         miou_list.append(miou)
         step_list.append(step)
 
-        #plot_class_ious(step, cls_to_iou, set_fonts, label_def)
+        if FLAGS.metric_to_plot == 'class_iou':
+            plot_class_ious(step, cls_to_iou, set_fonts, label_def,
+                            segmentation_dataset.get_cls_to_percentage(
+                                dataset))
 
-        #plot_confusion(confusion_matrix, label_def)
+        elif FLAGS.metric_to_plot == 'confusion_matrix':
+            plot_confusion(confusion_matrix, label_def)
 
-    plot_mious(miou_list, step_list, FLAGS.dataset, set_fonts,
-               model_variant='xception')
+    if FLAGS.metric_to_plot == 'miou':
+        # plot_mious(miou_list, step_list, FLAGS.dataset, set_fonts,
+        #            model_variant='xception')
 
-    # miou_list = np.array(miou_list)
-    # step_list = np.array(step_list)
-    # labels_list = ['mobileNet', 'xception']
-    # select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
-    #               if 'size' in dataset]
-    # plot_mious(miou_list[select_idx], step_list[select_idx],
-    #            labels_list, set_fonts)
+        miou_list = np.array(miou_list)
+        step_list = np.array(step_list)
+        #labels_list = ['VB: mobileNet', 'WB: mobileNet', 'VB: xception']
+        #labels_list = ['All training data', 'Real training data', 'Artificial Training data']
+        #labels_list = ['Real training data', 'Artificial Training data']
+        #labels_list = ['PASCAL pretrained', 'Binary pretrained']
+        labels_list = ['VB: PASCAL pretrained', 'VB: Binary pretrained',
+                       'WB: PASCAL pretrained', 'WB: Binary pretrained']
+        select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
+                      if 'size' in dataset]
+        plot_mious(miou_list[select_idx], step_list[select_idx],
+                   labels_list, set_fonts)
 
 
 if __name__ == '__main__':

@@ -69,6 +69,11 @@ def get_label_def(dataset):
     return _DATASETS_INFORMATION[dataset].labels_to_class
 
 
+def get_cls_to_percentage(dataset):
+
+    return _DATASETS_INFORMATION[dataset].cls_to_percentage
+
+
 def get_weight_list(labels_to_class, cls_to_weight):
 
     weight_list = np.zeros(len(labels_to_class))
