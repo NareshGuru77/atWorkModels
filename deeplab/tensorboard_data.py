@@ -7,6 +7,8 @@ from scipy.signal import savgol_filter
 import copy
 import os
 import seaborn as sns
+import cycler
+import matplotlib as mpl
 
 flags = tf.app.flags
 
@@ -43,7 +45,7 @@ def get_results(events_path, class_names, cls_to_iou):
         step.append(event.step)
         for v in event.summary.value:
             if np.any(class_names == v.tag):
-                cls_to_iou[v.tag].append(v.simple_value)
+                cls_to_iou[v.tag].append(v.simple_value * 100.)
 
             if event.step == FLAGS.final_step and v.tag == 'confusion_matrix':
                 confusion_string = np.array(v.tensor.string_val)
@@ -55,67 +57,123 @@ def get_results(events_path, class_names, cls_to_iou):
                 confusion_matrix = np.array(confusion_matrix, dtype=np.float32)
 
             if v.tag == 'miou_1.0':
-                miou.append(v.simple_value)
+                miou.append(v.simple_value * 100.)
 
     step = np.unique(step)
 
     return step, miou, cls_to_iou, confusion_matrix, confusion_string
 
 
+def plot_class_ious(step, cls_to_iou, set_fonts, label_def):
+
+    plot_objs = []
+
+    for index, (key, values) in enumerate(cls_to_iou.items()):
+        values = savgol_filter(values, 7, 3)
+        pl, = plt.plot(step, values, label=key,
+                      c=np.flip(colormap[index], 0)/255.)
+        plot_objs.append(pl)
+
+    plt.tick_params(axis='both', which='major', labelsize=set_fonts)
+    plt.xlabel('Number of training steps', fontsize=set_fonts, labelpad=12)
+    plt.ylabel('Class IOU (%)', fontsize=set_fonts)
+    plt.legend(plot_objs, label_def.values(), fontsize=set_fonts, loc=4)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_mious(miou_list, step_list, labels_list, set_fonts,
+               model_variant='mobileNet'):
+
+    mark = ['o', 'd', '|', 's', 's', '|', 'd', 'o']
+    plot_objs = []
+
+    for index, (miou, step) in enumerate(zip(miou_list, step_list)):
+        miou = savgol_filter(miou, 5, 2)
+        pl, = plt.plot(step, miou)
+        miou_new, step_new = miou, step
+        if (model_variant == 'xception' or
+                'xception' in labels_list[index]):
+            miou_new = miou[0::2]
+            step_new = step[0::2]
+        sc = plt.scatter(step_new, miou_new,
+                         marker=mark[index], linewidths=0.2)
+        plot_objs.append((pl, sc))
+        print(labels_list[index], '=', round(miou[-1], 2))
+
+    plt.tick_params(axis='both', which='major',
+                    labelsize=set_fonts)
+    plt.xlabel('Number of training steps',
+               fontsize=set_fonts, labelpad=12)
+    plt.ylabel('Mean IOU (%)', fontsize=set_fonts)
+    plt.legend(plot_objs, labels_list,
+               fontsize=set_fonts, loc=4)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_confusion(confusion_matrix, label_def):
+
+    correct_predictions = np.diag(confusion_matrix)
+    second_max = sorted(correct_predictions)[-2]
+    confusion_matrix = confusion_matrix/(
+        np.sum(confusion_matrix, axis=1)[np.newaxis].T)
+    #confusion_matrix = np.round(confusion_matrix, 2)
+
+    sns.heatmap(confusion_matrix, xticklabels=label_def.values(),
+                yticklabels=label_def.values(), vmin=0, vmax=0.6,
+                cmap=sns.color_palette('Blues', n_colors=30),
+                annot=True, annot_kws={"size": 12})
+    plt.xticks(rotation=80)
+    plt.tight_layout()
+    plt.show()
+
+
 def main(unused_argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
-    labels_mn = ['mobileNet']*3
-    labels_xc = ['transfer']*3
-    labels = labels_mn+labels_xc
+    set_fonts = 12
+    num_plots = 4
 
-    cls_to_iou = {}
-    step = []
+    if len(FLAGS.dataset) != len(FLAGS.events_dir):
+        raise ValueError()
 
-    for index, (variant, event_dir) in enumerate(zip(FLAGS.dataset, FLAGS.events_dir)):
+    colormap = plt.cm.get_cmap('Dark2')
+    color = colormap(np.linspace(0, 1, num_plots))
+    mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', color)
+
+    miou_list = []
+    step_list = []
+
+    for index, (dataset, event_dir) in enumerate(
+            zip(FLAGS.dataset, FLAGS.events_dir)):
 
         event_file = os.path.join(event_dir, os.listdir(
             event_dir)[0])
-        label_def = segmentation_dataset.get_label_def(variant)
+        label_def = segmentation_dataset.get_label_def(dataset)
         class_names = np.array(label_def.values())
         class_names = np.array(['class/' + cls for cls in class_names])
         cls_to_iou = {key: [] for key in class_names}
 
         (step, miou, cls_to_iou,
          confusion_matrix, _) = get_results(event_file, class_names, cls_to_iou)
+        miou_list.append(miou)
+        step_list.append(step)
 
-        correct_predictions = np.diag(confusion_matrix)
-        second_max = sorted(correct_predictions)[-2]
-        confusion_matrix = confusion_matrix/np.max(confusion_matrix, axis=0)
-        confusion_matrix = np.round(confusion_matrix, 2)
+        #plot_class_ious(step, cls_to_iou, set_fonts, label_def)
 
-        sns.heatmap(confusion_matrix, xticklabels=label_def.values(),
-                    yticklabels=label_def.values(), vmin=0, vmax=0.6,
-                    cmap=sns.color_palette('Blues', n_colors=30),
-                    annot=True, annot_kws={"size": 12})
-        plt.xticks(rotation=80)
-        plt.tight_layout()
-        plt.show()
+        #plot_confusion(confusion_matrix, label_def)
 
-    #     if 'size' in variant:
-    #         if len(miou) > 1:
-    #             miou = savgol_filter(miou, 5, 2)
-    #             plt.plot(step, miou, label=labels[index] + ' : ' + variant)
-    #             plt.text(step[-1], miou[-1], round(miou[-1], 4))
-    #         else:
-    #             plt.scatter(FLAGS.final_step, miou, marker='+',
-    #                         linewidths=2, label='quantized model: ' + labels[index])
-    #             plt.text(FLAGS.final_step, miou[0], round(miou[0], 4))
-    #
-    # plt.legend()
-    # plt.show()
+    plot_mious(miou_list, step_list, FLAGS.dataset, set_fonts,
+               model_variant='xception')
 
-    # for index, (key, values) in enumerate(cls_to_iou.items()):
-    #     values = savgol_filter(values, 7, 3)
-    #     plt.plot(step, values, label=key, c=np.flip(colormap[index], 0)/255.)
-    #
-    # plt.legend()
-    # plt.show()
+    # miou_list = np.array(miou_list)
+    # step_list = np.array(step_list)
+    # labels_list = ['mobileNet', 'xception']
+    # select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
+    #               if 'size' in dataset]
+    # plot_mious(miou_list[select_idx], step_list[select_idx],
+    #            labels_list, set_fonts)
 
 
 if __name__ == '__main__':
