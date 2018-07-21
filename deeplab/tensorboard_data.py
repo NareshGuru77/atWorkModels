@@ -10,6 +10,8 @@ import seaborn as sns
 import cycler
 import matplotlib as mpl
 import operator
+from matplotlib import patches
+from matplotlib.collections import PatchCollection
 
 flags = tf.app.flags
 
@@ -24,8 +26,11 @@ flags.DEFINE_multi_string('events_dir', None,
 flags.DEFINE_integer('final_step', 30000,
                      'Final step of logs in the event file.')
 
-flags.DEFINE_string('metric_to_plot', 'confusion_matrix',
-                    'can be miou, class_iou, confusion_matrix')
+flags.DEFINE_string('metric_to_plot', 'miou',
+                    'can be miou, class_iou, confusion_matrix, quant_results')
+
+flags.DEFINE_bool('all_variants', True,
+                  'Plot all variants together or not.')
 
 colormap = np.asarray([[75, 25, 230], [75, 180, 60],
                        [25, 225, 255], [200, 130, 0], [48, 130, 245],
@@ -73,17 +78,17 @@ def plot_class_ious(step, cls_to_iou, set_fonts, label_def,
 
     plot_objs = []
 
-    cls_to_iou = {key.split('/')[-1]: value[-1]
+    cls_to_iou = {key.split('/')[-1]: np.mean(value)#value[-1]
                   for key, value in cls_to_iou.items()}
 
     cls_to_iou.pop('background', None)
     cls_to_percentage.pop('background', None)
 
-    max_class_iou = np.sum(cls_to_iou.values())
+    max_class_iou = np.max(cls_to_iou.values())
     cls_to_iou = {key: value/max_class_iou
                  for key, value in cls_to_iou.items()}
 
-    max_percentage = np.sum(cls_to_percentage.values())
+    max_percentage = np.max(cls_to_percentage.values())
     cls_to_percentage = {key: value/max_percentage
                       for key, value in cls_to_percentage.items()}
 
@@ -137,7 +142,7 @@ def plot_mious(miou_list, step_list, labels_list, set_fonts,
         sc = plt.scatter(step_new, miou_new,
                          marker=mark[index], linewidths=0.2)
         plot_objs.append((pl, sc))
-        print(labels_list[index], '=', round(miou[-1], 2))
+        print labels_list[index], '=', round(miou[-1], 2)
 
     plt.tick_params(axis='both', which='major',
                     labelsize=set_fonts)
@@ -147,26 +152,53 @@ def plot_mious(miou_list, step_list, labels_list, set_fonts,
     plt.legend(plot_objs, labels_list,
                fontsize=set_fonts, loc=4)
     plt.tight_layout()
+    plt.grid(zorder=0, linestyle='dotted')
     plt.show()
 
 
 def plot_confusion(confusion_matrix, label_def):
 
     fig, ax = plt.subplots()
-    correct_predictions = np.diag(confusion_matrix)
-    second_max = sorted(correct_predictions)[-2]
     confusion_matrix = confusion_matrix/(
-        np.sum(confusion_matrix, axis=1)[np.newaxis].T)
-    confusion_matrix = confusion_matrix * 100
-    confusion_matrix = np.round(confusion_matrix, 2)
+        np.sum(confusion_matrix, axis=1)[np.newaxis].T) * 100
 
     sns.heatmap(confusion_matrix, xticklabels=label_def.values(),
                 yticklabels=label_def.values(), vmin=0, vmax=50,
                 cmap=sns.color_palette('Blues', n_colors=30),
-                annot=True, annot_kws={"size": 12})
+                annot=True, annot_kws={"size": 12}, fmt='.2f')
     ax.xaxis.tick_top()
     plt.xticks(rotation=80)
     plt.tight_layout()
+    plt.show()
+
+
+def plot_quantization_results(miou_list, labels_list, set_fonts):
+
+    model_size_list = [8.7, 2.8, 165.6, 44.7]
+    miou = []
+    mark = ['o', 'd', '^', 's']
+
+    for mo in miou_list:
+        miou.append(mo[-1])
+
+    fig, ax = plt.subplots()
+    for index, (sz, mo) in enumerate(zip(model_size_list, miou)):
+        ax.scatter(sz, mo, label=labels_list[index],
+                    marker=mark[index], linewidths=5)
+        plt.ylim([60, 102])
+
+    rect = patches.Rectangle((0, 85), 10, 15, fill=False,
+                             edgecolor='g', linewidth=3)
+    #pc = PatchCollection(rect)
+    ax.add_patch(rect)
+    plt.tick_params(axis='both', which='major',
+                    labelsize=set_fonts)
+    plt.xlabel('Occupied disk memory',
+               fontsize=set_fonts, labelpad=12)
+    plt.ylabel('Mean IOU (%)', fontsize=set_fonts)
+    plt.legend(fontsize=set_fonts, loc=4)
+    plt.tight_layout()
+    plt.grid(zorder=0, linestyle='dotted')
     plt.show()
 
 
@@ -217,17 +249,27 @@ def main(unused_argv):
 
         miou_list = np.array(miou_list)
         step_list = np.array(step_list)
-        #labels_list = ['VB: mobileNet', 'WB: mobileNet', 'VB: xception']
-        #labels_list = ['All training data', 'Real training data', 'Artificial Training data']
+        #labels_list = ['VB: mobileNet', 'WB: mobileNet', 'VB: xception', 'WB: xception']
+        # labels_list = ['All training data', 'Real training data', 'Artificial Training data']
         #labels_list = ['Real training data', 'Artificial Training data']
-        #labels_list = ['PASCAL pretrained', 'Binary pretrained']
-        labels_list = ['VB: PASCAL pretrained', 'VB: Binary pretrained',
-                       'WB: PASCAL pretrained', 'WB: Binary pretrained']
+        # labels_list = ['PASCAL pretrained', 'Binary pretrained']
+        # labels_list = ['mobileNet: PASCAL VOC 2012', 'mobileNet: atWork_binary',
+        #                'xception: PASCAL VOC 2012', 'xception: atWork_binary']
+        # labels_list = ['VB: PASCAL pretrained', 'VB: Binary pretrained',
+        #                'WB: PASCAL pretrained', 'WB: Binary pretrained']
+        labels_list = ['BW: actual', 'BW: 0.3', 'BW: 0.6', 'BW: 0.9']
         select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
                       if 'size' in dataset]
         plot_mious(miou_list[select_idx], step_list[select_idx],
                    labels_list, set_fonts)
 
+    if FLAGS.metric_to_plot == 'quant_results':
+        miou_list = np.array(miou_list)
+        select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
+                      if 'size' in dataset]
+        labels_list = ['mobileNet', 'mobileNet_8bit', 'xception', 'xception_8bit']
+        plot_quantization_results(miou_list[select_idx],
+                                  labels_list, set_fonts)
 
 if __name__ == '__main__':
     flags.mark_flag_as_required('events_dir')
