@@ -1,4 +1,6 @@
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 import numpy as np
 import tensorflow as tf
 from deeplab.utils import save_annotation
@@ -54,13 +56,12 @@ def main(unused_argv):
 
     g = load_graph()
     run_meta = tf.RunMetadata()
-    with g.as_default():
+    with g.as_default(), tf.device("/cpu:0"):
         #https://stackoverflow.com/questions/45085938/tensorflow-is-there-a-way-to-measure-flops-for-a-model
         opts = tf.profiler.ProfileOptionBuilder.float_operation()
         flops = tf.profiler.profile(g, run_meta=run_meta, cmd='op', options=opts)
         if flops is not None:
             print (flops.total_float_ops)
-
 
         # Create an object to hold the tracing data
         #run_metadata = tf.RunMetadata()
@@ -85,20 +86,44 @@ def main(unused_argv):
         input_operation = g.get_operation_by_name('import/'+_INPUT_OP)
         output_operation = g.get_operation_by_name('import/'+_OUTPUT_OP)
 
+        # print(tf.trainable_variables())
+        # for variable in tf.trainable_variables():
+        #     print(True)
+        #     print(variable.get_shape())
+
+        # param_stats = tf.profiler.profile(
+        #     tf.get_default_graph(),
+        #     options=tf.profiler.ProfileOptionBuilder
+        #         .trainable_variables_parameter())
+        # print(param_stats.total_parameters)
+
         # input_tensor = g.get_tensor_by_name('import/' + _INPUT_OP + ':0')
         # output_tensor = g.get_tensor_by_name('import/' + _OUTPUT_OP + ':0')
 
         with tf.Session(graph=g) as sess:
 
+            # run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            #run_metadata = tf.RunMetadata()
             semantic_predictions = sess.run(output_operation.outputs[0],
                                             feed_dict={
-                input_operation.outputs[0]: image
-            })
+                                            input_operation.outputs[0]: image})
 
             # semantic_predictions = sess.run(output_tensor,
             #                                 feed_dict={
             #                                     input_tensor: image
             #                                 })
+
+            options = tf.profiler.ProfileOptionBuilder.time_and_memory()
+            options["min_bytes"] = 0
+            options["min_micros"] = 0
+            # options["select"] = ("bytes", "peak_bytes", "output_bytes",
+            #                      "residual_bytes")
+            options["select"] = ("micros", "occurrence")
+            tf.profiler.profile(g, run_meta=run_meta, cmd="code",
+                                options=options)
+
+        if options is not None:
+            print (options.keys())
 
         result = np.array(semantic_predictions, dtype=np.uint8)
         result = np.squeeze(result)

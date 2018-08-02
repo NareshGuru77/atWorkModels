@@ -79,8 +79,10 @@ def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
         class_weights = dataset.get_class_weights(dataset.labels_to_class,
                                                   dataset.cls_to_percentage,
                                                   set_background_weight=background_weight)
+        print class_weights
         class_weights = tf.constant(class_weights)
-        weights = tf.gather(class_weights, scaled_labels)
+        # weights = tf.gather(class_weights, scaled_labels)
+        weights = tf.reduce_sum(tf.multiply(one_hot_labels, class_weights), 1)
     else:
         weights = tf.to_float(tf.not_equal(scaled_labels,
                                            dataset.ignore_label)) * loss_weight

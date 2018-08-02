@@ -11,7 +11,6 @@ import cycler
 import matplotlib as mpl
 import operator
 from matplotlib import patches
-from matplotlib.collections import PatchCollection
 
 flags = tf.app.flags
 
@@ -73,12 +72,38 @@ def get_results(events_path, class_names, cls_to_iou):
     return step, miou, cls_to_iou, confusion_matrix, confusion_string
 
 
-def plot_class_ious(step, cls_to_iou, set_fonts, label_def,
+def plot_class_ious_infer(iou_vals, percent_vals, set_fonts, combine):
+
+    x = np.arange(0, len(iou_vals) / combine)
+    iou_vals = np.reshape(iou_vals,
+                          (len(iou_vals) / combine, combine))
+    iou_vals = np.sum(iou_vals, axis=1)
+    percent_vals = np.reshape(percent_vals,
+                              (len(percent_vals) / combine, combine))
+    percent_vals = np.sum(percent_vals, axis=1)
+
+    plt.bar(x + 0.3, iou_vals, width=0.3, zorder=3, label='IOU')
+    plt.bar(x, percent_vals, width=0.3,
+            align='center', zorder=3, label='Percentage of pixels')
+    # plt.plot(x, iou_vals + 1)
+    # plt.plot(x, percent_vals + 1)
+    plt.xticks([])
+    #plt.yticks([])
+    plt.grid(zorder=0, axis='y')
+
+    plt.tick_params(axis='both', which='major', labelsize=set_fonts)
+    plt.xlabel('Combine every 3 classes', fontsize=set_fonts)
+    #plt.ylabel('Sum of Normalized values', fontsize=set_fonts)
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102),
+               loc=3, ncol=3,
+               borderaxespad=0., prop={'size': set_fonts})
+    plt.tight_layout()
+
+
+def plot_class_ious(cls_to_iou, set_fonts,
                     cls_to_percentage):
 
-    plot_objs = []
-
-    cls_to_iou = {key.split('/')[-1]: np.mean(value)#value[-1]
+    cls_to_iou = {key.split('/')[-1]: np.mean(value) # value[-1]
                   for key, value in cls_to_iou.items()}
 
     cls_to_iou.pop('background', None)
@@ -101,26 +126,81 @@ def plot_class_ious(step, cls_to_iou, set_fonts, label_def,
                        cls_iou in sorted_classes]
 
     x = np.arange(0, len(sorted_classes))
+
+    figure = plt.figure()
+    figure.add_subplot(2, 1, 1)
+    plot_class_ious_infer(iou_vals, percentage_vals, set_fonts, 3)
+
+    figure.add_subplot(2, 1, 2)
     plt.bar(x + 0.3, iou_vals, width=0.3, zorder=3, label='IOU')
     plt.bar(x, percentage_vals, width=0.3,
-            align='center', zorder=3, label='Percentage')
+            align='center', zorder=3, label='Percentage of pixels')
     plt.xticks(x, sorted_classes, rotation=80)
     plt.grid(zorder=0, axis='y')
 
-    # plt.bar(cls_to_iou.keys(), cls_to_iou.values())
-    # plt.bar(cls_to_percentage.keys(), cls_to_percentage.values())
-
-    # for index, (key, values) in enumerate(cls_to_iou.items()):
-    #     values = savgol_filter(values, 7, 3)
-    #     pl, = plt.plot(step, values, label=key,
-    #                   c=np.flip(colormap[index], 0)/255.)
-    #     plot_objs.append(pl)
-
     plt.tick_params(axis='both', which='major', labelsize=set_fonts)
-    # plt.xlabel('Number of training steps', fontsize=set_fonts, labelpad=12)
     plt.ylabel('Normalized values', fontsize=set_fonts)
-    #plt.legend(plot_objs, label_def.values(), fontsize=set_fonts, loc=4)
-    plt.legend()
+    # plt.legend(bbox_to_anchor=(0., 1.02, 1., .102),
+    #            loc=3, ncol=3,
+    #            borderaxespad=0., prop={'size': set_fonts})
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_miou_bars(miou, set_fonts, labels_list):
+
+    plot_objs = []
+    collect_mious = []
+    for index, m in enumerate(miou):
+        collect_mious.append(m[-1])
+
+    collect_mious = np.reshape(collect_mious, (8, 4))
+
+    mob_miou = collect_mious[0:4,:]
+    mob_miou = np.array(mob_miou)[np.newaxis].T
+    xcep_miou = collect_mious[4:8, :]
+    xcep_miou = np.array(xcep_miou)[np.newaxis].T
+    mob_xvals = [0, 4, 8, 12]
+    xcep_xvals = [2, 6, 10, 14]
+    offset = [-0.3, 0, 0.3, 0.6]
+
+    x_vals = np.arange(0, 15, 2)
+    x_ticks = ['full\nMobileNetv2', 'full\nXception', 'size\nMobileNetv2',
+               'size\nXception', 'shape\nMobileNetv2', 'shape\nXception'
+               ,'binary\nMobileNetv2', 'binary\nXception']
+
+    figure = plt.figure(figsize=(8, 4))
+    plt.ylim([30, 100])
+
+    for index, m in enumerate(mob_miou):
+        mob_objs = []
+        for i, val in enumerate(m):
+            mob_objs.append(plt.bar(mob_xvals[index] + offset[i], val,
+                                    width=0.3, zorder=3)[0])
+        plot_objs.append(mob_objs)
+
+    for index, m in enumerate(xcep_miou):
+        xcep_objs = []
+        for i, val in enumerate(m):
+            xcep_objs.append(plt.bar(xcep_xvals[index] + offset[i], val,
+                                     width=0.3, zorder=3)[0])
+        plot_objs.append(xcep_objs)
+
+    plot_objs = np.array(plot_objs)[np.newaxis].T
+
+    plot_objs = plot_objs.reshape(4,8)
+    new_plots = []
+
+    for obj in plot_objs:
+        new_plots.append(tuple(obj))
+
+    plt.grid(zorder=0, axis='y')
+    plt.xticks(x_vals, x_ticks, rotation=80)
+    plt.tick_params(axis='both', which='major', labelsize=set_fonts)
+    plt.ylabel('mIOU (%)', fontsize=set_fonts)
+    plt.legend(new_plots, labels_list, bbox_to_anchor=(0., 1.02, 1., .102),
+               loc=3, ncol=2,
+               borderaxespad=0., prop={'size': set_fonts})
     plt.tight_layout()
     plt.show()
 
@@ -148,7 +228,7 @@ def plot_mious(miou_list, step_list, labels_list, set_fonts,
                     labelsize=set_fonts)
     plt.xlabel('Number of training steps',
                fontsize=set_fonts, labelpad=12)
-    plt.ylabel('Mean IOU (%)', fontsize=set_fonts)
+    plt.ylabel('mIOU (%)', fontsize=set_fonts)
     plt.legend(plot_objs, labels_list,
                fontsize=set_fonts, loc=4)
     plt.tight_layout()
@@ -184,13 +264,13 @@ def plot_quantization_results(miou_list, labels_list, set_fonts):
     fig, ax = plt.subplots()
     for index, (sz, mo) in enumerate(zip(model_size_list, miou)):
         ax.scatter(sz, mo, label=labels_list[index],
-                    marker=mark[index], linewidths=5)
+                    marker=mark[index], linewidths=4)
         plt.ylim([60, 102])
 
-    rect = patches.Rectangle((0, 85), 10, 15, fill=False,
-                             edgecolor='g', linewidth=3)
-    #pc = PatchCollection(rect)
+    rect = patches.Rectangle((0, 90), 10, 10, fill=False,
+                             edgecolor='g', linewidth=2)
     ax.add_patch(rect)
+
     plt.tick_params(axis='both', which='major',
                     labelsize=set_fonts)
     plt.xlabel('Occupied disk memory',
@@ -236,7 +316,7 @@ def main(unused_argv):
         step_list.append(step)
 
         if FLAGS.metric_to_plot == 'class_iou':
-            plot_class_ious(step, cls_to_iou, set_fonts, label_def,
+            plot_class_ious(cls_to_iou, set_fonts,
                             segmentation_dataset.get_cls_to_percentage(
                                 dataset))
 
@@ -249,24 +329,31 @@ def main(unused_argv):
 
         miou_list = np.array(miou_list)
         step_list = np.array(step_list)
-        #labels_list = ['VB: mobileNet', 'WB: mobileNet', 'VB: xception', 'WB: xception']
-        # labels_list = ['All training data', 'Real training data', 'Artificial Training data']
+        labels_list = ['VB: MobileNetv2', 'WB: MobileNetv2', 'VB: Xception', 'WB: Xception']
+        # labels_list = ['Real training data', 'VB all training data', 'WB all training data',
+        #                'VB artificial training data']
+        # labels_list = ['Real training data', 'VB artificial Training data',
+        #                'WB all training data']
         #labels_list = ['Real training data', 'Artificial Training data']
         # labels_list = ['PASCAL pretrained', 'Binary pretrained']
         # labels_list = ['mobileNet: PASCAL VOC 2012', 'mobileNet: atWork_binary',
         #                'xception: PASCAL VOC 2012', 'xception: atWork_binary']
         # labels_list = ['VB: PASCAL pretrained', 'VB: Binary pretrained',
         #                'WB: PASCAL pretrained', 'WB: Binary pretrained']
-        labels_list = ['BW: actual', 'BW: 0.3', 'BW: 0.6', 'BW: 0.9']
+        # labels_list = ['BW: actual', 'BW: 0.3', 'BW: 0.6', 'BW: 0.9']
+        # labels_list = ['cosine restarts', 'poly']
+
         select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
-                      if 'size' in dataset]
+                      if 'binary' in dataset]
         plot_mious(miou_list[select_idx], step_list[select_idx],
-                   labels_list, set_fonts)
+                   labels_list, set_fonts, model_variant='xception')
+
+        # plot_miou_bars(miou_list, set_fonts, labels_list)
 
     if FLAGS.metric_to_plot == 'quant_results':
         miou_list = np.array(miou_list)
         select_idx = [idx for idx, dataset in enumerate(FLAGS.dataset)
-                      if 'size' in dataset]
+                      if 'shape' in dataset]
         labels_list = ['mobileNet', 'mobileNet_8bit', 'xception', 'xception_8bit']
         plot_quantization_results(miou_list[select_idx],
                                   labels_list, set_fonts)

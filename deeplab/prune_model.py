@@ -25,30 +25,14 @@ flags.DEFINE_string('pruning_logs_dir', './checkpoints_logs/pruning/',
 flags.DEFINE_string('frozen_graph_path', './atWorkData/inference/mobileNet_binary/mobilenet.pb',
                     'Path of the frozen inference graph')
 
-flags.DEFINE_string('checkpoint_path', './checkpoints_logs/train_logs/mobileNet/similar_01/model.ckpt-30000',
+flags.DEFINE_string('checkpoint_path', './checkpoints_logs/train_logs/mobileNet/intermediate_logs/similar_01/model.ckpt-30000',
                     'Path of the checkpoint')
-
-# def load_graph_def():
-#     with tf.gfile.GFile(FLAGS.frozen_graph_path, "rb") as f:
-#         graph_def = tf.GraphDef()
-#
-#     graph_def.ParseFromString(f.read())
-#     return graph_def
 
 def main(unused_argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     g = tf.Graph()
     with g.as_default():
-
-        # graph_def = load_graph_def()
-        # tf.import_graph_def(
-        #     graph_def,
-        #     input_map=None,
-        #     return_elements=None,
-        #     name=None,
-        #     op_dict=None,
-        #     producer_op_list=None)
 
         # Create global step variable
         global_step = tf.train.get_or_create_global_step()

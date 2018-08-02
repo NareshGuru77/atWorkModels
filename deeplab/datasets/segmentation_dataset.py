@@ -85,24 +85,31 @@ def get_weight_list(labels_to_class, cls_to_weight):
 
 def get_class_weights(labels_to_class, cls_to_percentage, set_background_weight=None):
 
-    cls_to_weight = {key: round(1 / (100 * value), 4)
-                     for key, value in cls_to_percentage.items()}
+    cls_to_pixel_count = {key: value * 640 * 480 * 7500 / 100
+                          for key, value in cls_to_percentage.items()}
 
-    normalizer = sum(cls_to_weight.values()) - cls_to_weight['background']
+    median_freq = np.median(list(cls_to_pixel_count.values()))
+    cls_to_weight = {key: median_freq * 1. / value
+                     for key, value in cls_to_pixel_count.items()}
 
-    if set_background_weight is None:
-        background_weight = cls_to_weight['background']
-    else:
-        background_weight = set_background_weight
-
-    cls_to_weight = {key: round(value * (1 - background_weight) / normalizer, 4)
-                     if key is not 'background'
-                     else background_weight for key, value in cls_to_weight.items()}
-
-    if abs(1. - sum(cls_to_weight.values())) > 1e-3:
-        raise ValueError(
-            'The sum of weights is {}... The weights have not been normalized...'.format(
-                sum(cls_to_weight.values())))
+    # cls_to_weight = {key: round(1 / (100 * value), 4)
+    #                  for key, value in cls_to_percentage.items()}
+    #
+    # normalizer = sum(cls_to_weight.values()) - cls_to_weight['background']
+    #
+    # if set_background_weight is None:
+    #     background_weight = cls_to_weight['background']
+    # else:
+    #     background_weight = set_background_weight
+    #
+    # cls_to_weight = {key: round(value * (1 - background_weight) / normalizer, 4)
+    #                  if key is not 'background'
+    #                  else background_weight for key, value in cls_to_weight.items()}
+    #
+    # if abs(1. - sum(cls_to_weight.values())) > 1e-3:
+    #     raise ValueError(
+    #         'The sum of weights is {}... The weights have not been normalized...'.format(
+    #             sum(cls_to_weight.values())))
 
     return get_weight_list(labels_to_class, cls_to_weight)
 
