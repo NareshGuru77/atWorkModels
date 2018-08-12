@@ -28,8 +28,7 @@ def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
                                                   loss_weight=1.0,
                                                   upsample_logits=True,
                                                   scope=None,
-                                                  enable_class_balancing=False,
-                                                  background_weight=None
+                                                  enable_class_balancing=False
                                                   ):
   """Adds softmax cross entropy loss for logits of each scale.
 
@@ -74,14 +73,10 @@ def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
         if dataset.cls_to_percentage is None:
             raise ValueError('Class balancing for {} currently not supported'.format(
                                             dataset.name))
-        if not (background_weight is None or 0.1 <= background_weight <= 0.9):
-            raise ValueError('Backgrounds weight not in range [0.1,0.9]')
+
         class_weights = dataset.get_class_weights(dataset.labels_to_class,
-                                                  dataset.cls_to_percentage,
-                                                  set_background_weight=background_weight)
-        print class_weights
+                                                  dataset.cls_to_percentage)
         class_weights = tf.constant(class_weights)
-        # weights = tf.gather(class_weights, scaled_labels)
         weights = tf.reduce_sum(tf.multiply(one_hot_labels, class_weights), 1)
     else:
         weights = tf.to_float(tf.not_equal(scaled_labels,

@@ -89,8 +89,24 @@ def main(unused_argv):
         #     method=tf.image.ResizeMethod.BILINEAR,
         #     align_corners=True)
 
+        param_stats = tf.profiler.profile(
+            tf.get_default_graph(),
+            options=tf.profiler.ProfileOptionBuilder
+                .trainable_variables_parameter())
+        print('Total parameters: ',param_stats.total_parameters)
+
+        total_parameters = 0
+        for variable in tf.trainable_variables():
+
+            shape = variable.get_shape()
+            variable_parameters = 1
+            for dim in shape:
+                variable_parameters *= dim.value
+            total_parameters += variable_parameters
+        print('Total parameters: ', total_parameters)
+
         tf.train.get_or_create_global_step()
-        saver = tf.train.Saver(slim.get_variables_to_restore())#exclude=['concat_projection']))
+        saver = tf.train.Saver(slim.get_variables_to_restore())
         sv = tf.train.Supervisor(graph=g,
                                  logdir=FLAGS.inference_dir,
                                  init_op=tf.global_variables_initializer(),

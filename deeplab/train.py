@@ -166,9 +166,6 @@ flags.DEFINE_string('dataset_dir', None, 'Where the dataset reside.')
 flags.DEFINE_boolean('enable_class_balancing', False,
                      'Enable class balancing in loss function.')
 
-flags.DEFINE_float('background_weight', None,
-                     'Weight for the background class.')
-
 
 def _build_deeplab(inputs_queue, outputs_to_num_classes, dataset):
   """Builds a clone of DeepLab.
@@ -222,8 +219,7 @@ def _build_deeplab(inputs_queue, outputs_to_num_classes, dataset):
         loss_weight=1.0,
         upsample_logits=FLAGS.upsample_logits,
         scope=output,
-        enable_class_balancing= FLAGS.enable_class_balancing,
-        background_weight=FLAGS.background_weight)
+        enable_class_balancing= FLAGS.enable_class_balancing)
 
   return outputs_to_scales_to_logits
 
