@@ -1,10 +1,12 @@
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 import numpy as np
 import tensorflow as tf
 from deeplab.utils import save_annotation
 import cv2
+import timeit
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
 
 slim = tf.contrib.slim
 
@@ -27,11 +29,20 @@ flags.DEFINE_string('dataset', 'atWork',
 flags.DEFINE_multi_integer('inference_crop_size', [481, 641],
                            'Crop size [height, width] for visualization.')
 
+flags.DEFINE_bool('print_flops', False, 'Print flops of inference graph')
+
+flags.DEFINE_bool('avg_inf_time', False,
+                  'Calculate average inference time over a set of runs')
+
+flags.DEFINE_integer('num_runs', 20,
+                     'Number of repetitions for inference if average inference '
+                     'time is required')
+
 # The format to save prediction
 _PREDICTION_FORMAT = '%s_prediction'
 
 # The format to save prediction
-_RAW_FORMAT = '%s_raw'
+_RAW_FORMAT = '%s'
 
 _INPUT_OP = 'ImageTensor'
 
@@ -49,23 +60,20 @@ def load_graph():
 
     return graph
 
+
 def main(unused_argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     tf.gfile.MakeDirs(FLAGS.inference_dir)
 
     g = load_graph()
-    run_meta = tf.RunMetadata()
     with g.as_default(), tf.device("/cpu:0"):
-        #https://stackoverflow.com/questions/45085938/tensorflow-is-there-a-way-to-measure-flops-for-a-model
-        opts = tf.profiler.ProfileOptionBuilder.float_operation()
-        flops = tf.profiler.profile(g, run_meta=run_meta, cmd='op', options=opts)
-        if flops is not None:
-            print (flops.total_float_ops)
 
-        # Create an object to hold the tracing data
-        #run_metadata = tf.RunMetadata()
-
+        if FLAGS.print_flops:
+            opts = tf.profiler.ProfileOptionBuilder.float_operation()
+            flops = tf.profiler.profile(g, options=opts)
+            if flops is not None:
+                print 'Total flops: ', flops.total_float_ops
 
         image_name = FLAGS.image_path.split('/')[-1]
         image_name, image_extension = image_name.split('.')
@@ -86,44 +94,29 @@ def main(unused_argv):
         input_operation = g.get_operation_by_name('import/'+_INPUT_OP)
         output_operation = g.get_operation_by_name('import/'+_OUTPUT_OP)
 
-        # print(tf.trainable_variables())
-        # for variable in tf.trainable_variables():
-        #     print(True)
-        #     print(variable.get_shape())
-
-        # param_stats = tf.profiler.profile(
-        #     tf.get_default_graph(),
-        #     options=tf.profiler.ProfileOptionBuilder
-        #         .trainable_variables_parameter())
-        # print(param_stats.total_parameters)
-
-        # input_tensor = g.get_tensor_by_name('import/' + _INPUT_OP + ':0')
-        # output_tensor = g.get_tensor_by_name('import/' + _OUTPUT_OP + ':0')
-
         with tf.Session(graph=g) as sess:
 
-            # run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-            #run_metadata = tf.RunMetadata()
-            semantic_predictions = sess.run(output_operation.outputs[0],
-                                            feed_dict={
-                                            input_operation.outputs[0]: image})
+            elapsed_time = 0
+            semantic_predictions = None
+            if FLAGS.avg_inf_time:
+                for i in range(20):
+                    start_time = timeit.default_timer()
+                    semantic_predictions = sess.run(output_operation.outputs[0],
+                                                    feed_dict={
+                                                    input_operation.outputs[0]: image})
 
-            # semantic_predictions = sess.run(output_tensor,
-            #                                 feed_dict={
-            #                                     input_tensor: image
-            #                                 })
+                    elapsed_time += timeit.default_timer() - start_time
 
-            options = tf.profiler.ProfileOptionBuilder.time_and_memory()
-            options["min_bytes"] = 0
-            options["min_micros"] = 0
-            # options["select"] = ("bytes", "peak_bytes", "output_bytes",
-            #                      "residual_bytes")
-            options["select"] = ("micros", "occurrence")
-            tf.profiler.profile(g, run_meta=run_meta, cmd="code",
-                                options=options)
+                elapsed_time = np.round(elapsed_time/20, 4)
+            else:
+                start_time = timeit.default_timer()
+                semantic_predictions = sess.run(output_operation.outputs[0],
+                                                feed_dict={
+                                                    input_operation.outputs[0]: image})
 
-        if options is not None:
-            print (options.keys())
+                elapsed_time = timeit.default_timer() - start_time
+
+        print 'Inference time : {} s'.format(elapsed_time)
 
         result = np.array(semantic_predictions, dtype=np.uint8)
         result = np.squeeze(result)
@@ -140,6 +133,7 @@ def main(unused_argv):
             result, FLAGS.inference_dir,
             _PREDICTION_FORMAT % image_name, add_colormap=True,
             colormap_type=FLAGS.dataset)
+
 
 if __name__ == '__main__':
     flags.mark_flag_as_required('image_path')
