@@ -80,4 +80,5 @@ def label_to_color_image(label, dataset=_ATWORK):
     raise ValueError('label value too large.')
 
   colormap = create_label_colormap(dataset)
+  colormap = np.asarray([list(reversed(color)) for color in colormap])
   return colormap[label]
