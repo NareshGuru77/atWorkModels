@@ -27,10 +27,10 @@ class App:
         frame_0_0.grid(row=0, sticky="ew")
         frame_0_1 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
         frame_0_1.grid(row=0, column=1, sticky="ew")
-        frame_1_0 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
-        frame_1_0.grid(row=1, column=0, sticky="ew")
-        frame_1_1 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
-        frame_1_1.grid(row=1, column=1, sticky="ew")
+        self.frame_1_0 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
+        self.frame_1_0.grid(row=1, column=0, sticky="ew")
+        self.frame_1_1 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
+        self.frame_1_1.grid(row=1, column=1, sticky="ew")
         frame_2_0 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
         frame_2_0.grid(row=2, column=0, sticky="ew")
         self.frame_2_1 = Tkinter.Frame(window, width=450, height=50, padx=3, pady=3)
@@ -42,8 +42,7 @@ class App:
 
         self.write_text(frame_0_0, "Dataset variant:")
         self.write_text(frame_0_1, "DeepLabv3+ Encoder:")
-        self.write_text(frame_1_0, "Color Guide:")
-        self.write_text(frame_1_1, "?????:")
+        self.write_text(self.frame_1_0, "Color Guide:")
         self.write_text(frame_2_0, "Live Video:")
         self.write_text(self.frame_2_1, "Current Image:")
         self.write_text(self.frame_3_0, "Segmented result:")
@@ -51,26 +50,22 @@ class App:
 
         btn_variant = Tkinter.Button(frame_0_0,
                                      text="full", width=10, command=
-                                     lambda: self.display_image("./images/full_guide.png",
-                                                                frame_1_0, 2, 0, (600, 100)))
+                                     lambda: self.set_variant("full"))
         btn_variant.grid(row=1, column=0)
 
         btn_variant = Tkinter.Button(frame_0_0,
                                      text="size_invariant", width=10, command=
-                                     lambda: self.display_image("./images/size_guide.png",
-                                                                frame_1_0, 2, 0, (600, 100)))
+                                     lambda: self.set_variant("size_invariant"))
         btn_variant.grid(row=1, column=1)
 
         btn_variant = Tkinter.Button(frame_0_0,
                                      text="similar_shapes", width=10, command=
-                                     lambda: self.display_image("./images/shape_guide.png",
-                                                                frame_1_0, 2, 0, (600, 100)))
+                                     lambda: self.set_variant("similar_shapes"))
         btn_variant.grid(row=2, column=0)
 
         btn_variant = Tkinter.Button(frame_0_0,
                                      text="binary", width=10, command=
-                                     lambda: self.display_image("./images/binary_guide.png",
-                                                                frame_1_0, 2, 0, (600, 100)))
+                                     lambda: self.set_variant("binary"))
         btn_variant.grid(row=2, column=1)
 
         btn_encoder = Tkinter.Button(frame_0_1, text="MobileNetv2", width=10,
@@ -99,8 +94,24 @@ class App:
 
         self.window.mainloop()
 
+    def update_info(self):
+        for widget in self.frame_1_1.winfo_children():
+            widget.destroy()
+        self.write_text(self.frame_1_1, "Dataset variant: {}, \n DeepLabv3+ encoder: {}".format(
+                        self.current_variant, self.current_encoder))
+
+    def set_variant(self, name):
+        self.current_variant = name
+        variant_to_guide = {"full": "./images/full_guide.png",
+                            "size_invariant": "./images/size_guide.png",
+                            "similar_shapes": "./images/shape_guide.png",
+                            "binary": "./images/binary_guide.png"}
+        self.display_image(variant_to_guide[name], self.frame_1_0, 2, 0, (600, 100))
+        self.update_info()
+
     def set_encoder(self, name):
         self.current_encoder = name
+        self.update_info()
 
     def write_text(self, frame, text):
         label_text = Tkinter.Label(frame, text=text,
@@ -117,17 +128,37 @@ class App:
     def segment_image(self):
 
         inference_dir = "./inference"
-        graph_paths = "../checkpoints_logs/train_logs/mobileNet/full_final_01/mobileNet_full.pb"
+        common_path = "../checkpoints_logs/train_logs/"
+        graphs = {"MobileNetv2": {"full": "mobileNet/full_final_01/mobileNet_full.pb",
+                                  "size_invariant": "mobileNet/size_invariant_final_01/mobileNet_size.pb",
+                                  "similar_shapes": "mobileNet/similar_shapes_final_01/mobileNet_shape.pb",
+                                  "binary": "mobileNet/binary_final_02/mobileNet_binary.pb"},
+                  "Xception": {"full": "xception/full_final_01/xception_full.pb",
+                               "size_invariant": "xception/size_invariant_final_01/xception_size.pb",
+                               "similar_shapes": "xception/similar_shapes_final_01/xception_shape.pb",
+                               "binary": "xception/binary_final_01/xception_binary.pb"}}
         inference_graph.FLAGS.image_path = self.image_path
-        inference_graph.FLAGS.graph_path = graph_paths
+        inference_graph.FLAGS.graph_path = os.path.join(common_path,
+                                                        graphs[self.current_encoder]
+                                                        [self.current_variant])
         inference_graph.FLAGS.inference_dir = inference_dir
         inference_graph.main(None)
         self.display_results(self.image_path, inference_dir)
 
     def display_results(self, image_path, inference_dir):
         seg_img_path = (inference_graph._PREDICTION_FORMAT % os.path.join(inference_dir,
-                        image_path.split('/')[-1].split('.')[0]) + '.png')
+                        image_path.split('/')[-1].split('.')[0]) + ".png")
         self.display_image(seg_img_path, self.frame_3_0, 1, 0,
+                           resize_to=self.resize_to_fit)
+        image = cv2.imread(image_path)
+        mask = cv2.imread(seg_img_path)
+        alpha = 0.6
+        cv2.addWeighted(mask, alpha, image, 1 - alpha,
+                        0, image)
+        overlay_save_path = os.path.join(inference_dir, image_path.split('/')[-1].split('_')[0] +
+                                         "_overlay.png")
+        cv2.imwrite(overlay_save_path, image)
+        self.display_image(overlay_save_path, self.frame_3_1, 1, 0,
                            resize_to=self.resize_to_fit)
 
     def snapshot(self):
