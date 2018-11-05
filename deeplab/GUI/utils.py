@@ -1,0 +1,17 @@
+import Tkinter
+from load_img import MyLoadImage
+
+
+def display_image(img_path, frame, row, column, resize_to=None):
+    img = MyLoadImage(img_path, resize_to=resize_to)
+    image = img.get_image()
+    label_var = Tkinter.Label(frame, image=image)
+    label_var.image = image
+    label_var.grid(row=row, column=column)
+
+
+def write_text(frame, text, row=0, column=0):
+    label_text = Tkinter.Label(frame, text=text,
+                               font=("Helvetica", 16),
+                               foreground="green")
+    label_text.grid(row=row, column=column)

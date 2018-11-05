@@ -61,6 +61,10 @@ def load_graph():
     return graph
 
 
+def get_prediction_format():
+    return _PREDICTION_FORMAT
+
+
 def main(unused_argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
