@@ -65,10 +65,17 @@ def get_prediction_format():
     return _PREDICTION_FORMAT
 
 
+def get_inference_time():
+
+    pass
+
+
 def main(unused_argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     tf.gfile.MakeDirs(FLAGS.inference_dir)
+
+    elapsed_time = 0
 
     g = load_graph()
     with g.as_default(), tf.device("/cpu:0"):
@@ -100,7 +107,6 @@ def main(unused_argv):
 
         with tf.Session(graph=g) as sess:
 
-            elapsed_time = 0
             semantic_predictions = None
             if FLAGS.avg_inf_time:
                 for i in range(20):
@@ -137,6 +143,8 @@ def main(unused_argv):
             result, FLAGS.inference_dir,
             _PREDICTION_FORMAT % image_name, add_colormap=True,
             colormap_type=FLAGS.dataset)
+
+    return elapsed_time
 
 
 if __name__ == '__main__':

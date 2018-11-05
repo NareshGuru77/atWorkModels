@@ -141,9 +141,8 @@ class App:
                                                         graphs[self.current_encoder]
                                                         [self.current_variant])
         inference_graph.FLAGS.inference_dir = inference_dir
-        inference_graph.main(None)
-        # self.write_text(self.window, "Inference time: {} s".format(inference_graph._INFERENCE_TIME),
-        #                 row=4)
+        inference_time = inference_graph.main(None)
+        write_text(self.window, "Inference time: {0:.2f} s".format(inference_time), row=4, column=1)
         self.display_results(self.image_path, inference_dir)
 
     def display_results(self, image_path, inference_dir):
