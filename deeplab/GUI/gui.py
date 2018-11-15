@@ -6,6 +6,7 @@ import time
 from video_capture import MyVideoCapture
 from utils import display_image
 from utils import write_text
+from utils import undistort
 from deeplab import inference_graph
 import os
 
@@ -166,6 +167,7 @@ class App:
         ret, frame = self.vid.get_frame()
 
         if ret:
+            frame = undistort(frame)
             img_path = "./snapshots/frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg"
             cv2.imwrite(img_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
             display_image(img_path, self.frame_2_1, 1, 0,
@@ -180,6 +182,7 @@ class App:
         ret, frame = self.vid.get_frame()
 
         if ret:
+            frame = undistort(frame)
             frame = cv2.resize(frame, self.resize_to_fit)
             photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
             self.canvas_vid.create_image(0, 0, image=photo, anchor=Tkinter.NW)
@@ -189,4 +192,4 @@ class App:
 
 
 # Create a window and pass it to the Application object
-App(Tkinter.Tk(), "Segmentation demo", "/home/nareshguru77/Desktop/m20_100_2.avi")
+App(Tkinter.Tk(), "Segmentation demo", 0) #"/home/nareshguru77/Desktop/m20_100_2.avi")
