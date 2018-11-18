@@ -6,7 +6,7 @@ from deeplab.utils import save_annotation
 import cv2
 import timeit
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
+# os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
 
 slim = tf.contrib.slim
 

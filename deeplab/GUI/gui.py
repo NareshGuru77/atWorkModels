@@ -10,6 +10,8 @@ from utils import undistort
 from deeplab import inference_graph
 import os
 
+_CALIBRATE = False
+
 
 # https://solarianprogrammer.com/2018/04/21/python-opencv-show-video-tkinter-window/
 # https://stackoverflow.com/questions/34276663/tkinter-gui-layout-using-frames-and-grid
@@ -167,7 +169,8 @@ class App:
         ret, frame = self.vid.get_frame()
 
         if ret:
-            frame = undistort(frame)
+            if _CALIBRATE:
+                frame = undistort(frame)
             img_path = "./snapshots/frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg"
             cv2.imwrite(img_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
             display_image(img_path, self.frame_2_1, 1, 0,
@@ -182,7 +185,8 @@ class App:
         ret, frame = self.vid.get_frame()
 
         if ret:
-            frame = undistort(frame)
+            if _CALIBRATE:
+                frame = undistort(frame)
             frame = cv2.resize(frame, self.resize_to_fit)
             photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
             self.canvas_vid.create_image(0, 0, image=photo, anchor=Tkinter.NW)

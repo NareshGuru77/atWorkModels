@@ -8,7 +8,7 @@ import glob
 
 # Define the chess board rows and columns
 rows = 7
-cols = 6
+cols = 9
 
 # Set the termination criteria for the corner sub-pixel algorithm
 criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 30, 0.001)
@@ -22,7 +22,7 @@ objectPointsArray = []
 imgPointsArray = []
 
 # Loop over the image files
-for path in glob.glob('./data/left[0-1][0-9].jpg'):
+for path in glob.glob('./data/*.jpg'):
     # Load the image and convert it to gray scale
     img = cv2.imread(path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -60,7 +60,7 @@ for i in range(len(objectPointsArray)):
 print("Total error: ", error / len(objectPointsArray))
 
 # Load one of the test images
-img = cv2.imread('./data/left12.jpg')
+img = cv2.imread('./data/2018-11-17-162522_1.jpg')
 h, w = img.shape[:2]
 
 # Obtain the new camera matrix and undistort the image

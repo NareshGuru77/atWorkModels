@@ -25,4 +25,6 @@ def undistort(frame):
     h, w = frame.shape[:2]
     newCameraMtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
     frame = cv2.undistort(frame, mtx, dist, None, newCameraMtx)
+    x, y, w, h = roi
+    frame = frame[y:y + h, x:x + w]
     return frame
