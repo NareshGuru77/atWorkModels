@@ -16,10 +16,6 @@
 
 See model.py for more details and usage.
 """
-
-import sys
-sys.path.append('/content/drive/atWorkModels/')
-sys.path.append('/content/drive/atWorkModels/deeplab')
 import six
 import tensorflow as tf
 from deeplab import common
@@ -75,12 +71,12 @@ flags.DEFINE_boolean('save_summaries_images', False,
 
 # Settings for training strategy.
 
-flags.DEFINE_enum('learning_policy', 'poly', ['poly', 'step'],
+flags.DEFINE_enum('learning_policy', 'cosine_restarts', ['poly', 'step', 'cosine_restarts'],
                   'Learning rate policy for training.')
 
 # Use 0.007 when training on PASCAL augmented training set, train_aug. When
 # fine-tuning on PASCAL trainval set, use learning rate=0.0001.
-flags.DEFINE_float('base_learning_rate', .0001,
+flags.DEFINE_float('base_learning_rate', .007,
                    'The base learning rate for model training.')
 
 flags.DEFINE_float('learning_rate_decay_factor', 0.1,
@@ -106,7 +102,7 @@ flags.DEFINE_integer('train_batch_size', 8,
 flags.DEFINE_float('weight_decay', 0.00004,
                    'The value of the weight decay for training.')
 
-flags.DEFINE_multi_integer('train_crop_size', [513, 513],
+flags.DEFINE_multi_integer('train_crop_size', [481, 641],
                            'Image crop size [height, width] during training.')
 
 flags.DEFINE_float('last_layer_gradient_multiplier', 1.0,
@@ -166,8 +162,12 @@ flags.DEFINE_string('train_split', 'train',
 
 flags.DEFINE_string('dataset_dir', None, 'Where the dataset reside.')
 
+# Flags for class balancing of loss function.
+flags.DEFINE_boolean('enable_class_balancing', False,
+                     'Enable class balancing in loss function.')
 
-def _build_deeplab(inputs_queue, outputs_to_num_classes, ignore_label):
+
+def _build_deeplab(inputs_queue, outputs_to_num_classes, dataset):
   """Builds a clone of DeepLab.
 
   Args:
@@ -175,7 +175,7 @@ def _build_deeplab(inputs_queue, outputs_to_num_classes, ignore_label):
     outputs_to_num_classes: A map from output type to the number of classes.
       For example, for the task of semantic segmentation with 21 semantic
       classes, we would have outputs_to_num_classes['semantic'] = 21.
-    ignore_label: Ignore label.
+    dataset: slim dataset object containing dataset information.
 
   Returns:
     A map of maps from output_type (e.g., semantic prediction) to a
@@ -215,10 +215,11 @@ def _build_deeplab(inputs_queue, outputs_to_num_classes, ignore_label):
         outputs_to_scales_to_logits[output],
         samples[common.LABEL],
         num_classes,
-        ignore_label,
+        dataset,
         loss_weight=1.0,
         upsample_logits=FLAGS.upsample_logits,
-        scope=output)
+        scope=output,
+        enable_class_balancing= FLAGS.enable_class_balancing)
 
   return outputs_to_scales_to_logits
 
@@ -272,7 +273,7 @@ def main(unused_argv):
       model_fn = _build_deeplab
       model_args = (inputs_queue, {
           common.OUTPUT_TYPE: dataset.num_classes
-      }, dataset.ignore_label)
+      }, dataset)
       clones = model_deploy.create_clones(config, model_fn, args=model_args)
 
       # Gather update_ops from the first clone. These contain, for example,

@@ -24,10 +24,12 @@ slim = tf.contrib.slim
 def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
                                                   labels,
                                                   num_classes,
-                                                  ignore_label,
+                                                  dataset,
                                                   loss_weight=1.0,
                                                   upsample_logits=True,
-                                                  scope=None):
+                                                  scope=None,
+                                                  enable_class_balancing=False
+                                                  ):
   """Adds softmax cross entropy loss for logits of each scale.
 
   Args:
@@ -62,14 +64,27 @@ def add_softmax_cross_entropy_loss_for_each_scale(scales_to_logits,
           labels, tf.shape(logits)[1:3], align_corners=True)
 
     scaled_labels = tf.reshape(scaled_labels, shape=[-1])
-    not_ignore_mask = tf.to_float(tf.not_equal(scaled_labels,
-                                               ignore_label)) * loss_weight
+
     one_hot_labels = slim.one_hot_encoding(
         scaled_labels, num_classes, on_value=1.0, off_value=0.0)
+
+    if enable_class_balancing:
+        tf.logging.info('Using class balancing for loss function.')
+        if dataset.cls_to_percentage is None:
+            raise ValueError('Class balancing for {} currently not supported'.format(
+                                            dataset.name))
+
+        class_weights = dataset.get_class_weights(dataset.labels_to_class,
+                                                  dataset.cls_to_percentage)
+        class_weights = tf.constant(class_weights)
+        weights = tf.reduce_sum(tf.multiply(one_hot_labels, class_weights), 1)
+    else:
+        weights = tf.to_float(tf.not_equal(scaled_labels,
+                                           dataset.ignore_label)) * loss_weight
     tf.losses.softmax_cross_entropy(
         one_hot_labels,
         tf.reshape(logits, shape=[-1, num_classes]),
-        weights=not_ignore_mask,
+        weights=weights,
         scope=loss_scope)
 
 
@@ -101,7 +116,7 @@ def get_model_init_fn(train_logdir,
   tf.logging.info('Initializing model from path: %s', tf_initial_checkpoint)
 
   # Variables that will not be restored.
-  exclude_list = ['global_step','concat_projection']
+  exclude_list = ['global_step']
   if not initialize_last_layer:
     exclude_list.extend(last_layers)
 
@@ -196,6 +211,11 @@ def get_model_learning_rate(
         training_number_of_steps,
         end_learning_rate=0,
         power=learning_power)
+  elif learning_policy == 'cosine_restarts':
+    learning_rate = tf.train.cosine_decay_restarts(
+          base_learning_rate,
+          global_step,
+          training_number_of_steps // 6)
   else:
     raise ValueError('Unknown learning policy.')
 

@@ -15,8 +15,6 @@
 
 """Extracts features for different models."""
 
-import sys
-sys.path.append('/content/drive/atWorkModels/deeplab/core')
 import functools
 import tensorflow as tf
 

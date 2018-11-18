@@ -51,7 +51,7 @@ flags.DEFINE_string('checkpoint_dir', None, 'Directory of model checkpoints.')
 flags.DEFINE_integer('vis_batch_size', 1,
                      'The number of images in each batch during evaluation.')
 
-flags.DEFINE_multi_integer('vis_crop_size', [513, 513],
+flags.DEFINE_multi_integer('vis_crop_size', [481, 641],
                            'Crop size [height, width] for visualization.')
 
 flags.DEFINE_integer('eval_interval_secs', 60 * 5,
@@ -84,10 +84,13 @@ flags.DEFINE_string('vis_split', 'val',
 
 flags.DEFINE_string('dataset_dir', None, 'Where the dataset reside.')
 
-flags.DEFINE_enum('colormap_type', 'pascal', ['pascal', 'cityscapes'],
+flags.DEFINE_enum('colormap_type', 'atWork', ['atWork'],
                   'Visualization colormap type.')
 
-flags.DEFINE_boolean('also_save_raw_predictions', False,
+flags.DEFINE_boolean('also_save_raw_predictions', True,
+                     'Also save raw predictions.')
+
+flags.DEFINE_boolean('also_save_labels', True,
                      'Also save raw predictions.')
 
 flags.DEFINE_integer('max_number_of_iterations', 0,
@@ -100,11 +103,20 @@ _SEMANTIC_PREDICTION_SAVE_FOLDER = 'segmentation_results'
 # The folder where raw semantic segmentation predictions are saved.
 _RAW_SEMANTIC_PREDICTION_SAVE_FOLDER = 'raw_segmentation_results'
 
+# The folder where raw semantic segmentation predictions are saved.
+_GROUND_TRUTH_SAVE_FOLDER = 'ground_truth'
+
 # The format to save image.
-_IMAGE_FORMAT = '%06d_image'
+_IMAGE_FORMAT = '%04d_image'
 
 # The format to save prediction
-_PREDICTION_FORMAT = '%06d_prediction'
+_PREDICTION_FORMAT = '%04d_prediction'
+
+# The format to save raw predictions
+_RAW_FORMAT = '%04d_raw'
+
+# The format to save ground truth
+_LABEL_FORMAT = '%04d_label'
 
 # To evaluate Cityscapes results on the evaluation server, the labels used
 # during training should be mapped to the labels for evaluation.
@@ -134,8 +146,8 @@ def _convert_train_id_to_eval_id(prediction, train_id_to_eval_id):
 
 
 def _process_batch(sess, original_images, semantic_predictions, image_names,
-                   image_heights, image_widths, image_id_offset, save_dir,
-                   raw_save_dir, train_id_to_eval_id=None):
+                   image_heights, image_widths, label, image_id_offset, save_dir,
+                   raw_save_dir, label_save_dir, train_id_to_eval_id=None):
   """Evaluates one single batch qualitatively.
 
   Args:
@@ -154,8 +166,9 @@ def _process_batch(sess, original_images, semantic_predictions, image_names,
    semantic_predictions,
    image_names,
    image_heights,
-   image_widths) = sess.run([original_images, semantic_predictions,
-                             image_names, image_heights, image_widths])
+   image_widths,
+   label) = sess.run([original_images, semantic_predictions,
+                             image_names, image_heights, image_widths, label])
 
   num_image = semantic_predictions.shape[0]
   for i in range(num_image):
@@ -164,6 +177,9 @@ def _process_batch(sess, original_images, semantic_predictions, image_names,
     original_image = np.squeeze(original_images[i])
     semantic_prediction = np.squeeze(semantic_predictions[i])
     crop_semantic_prediction = semantic_prediction[:image_height, :image_width]
+    if FLAGS.also_save_labels:
+        label = np.squeeze(label[i])
+        label = label[:image_height, :image_width]
 
     # Save image.
     save_annotation.save_annotation(
@@ -177,14 +193,19 @@ def _process_batch(sess, original_images, semantic_predictions, image_names,
         colormap_type=FLAGS.colormap_type)
 
     if FLAGS.also_save_raw_predictions:
-      image_filename = os.path.basename(image_names[i])
-
       if train_id_to_eval_id is not None:
         crop_semantic_prediction = _convert_train_id_to_eval_id(
             crop_semantic_prediction,
             train_id_to_eval_id)
       save_annotation.save_annotation(
-          crop_semantic_prediction, raw_save_dir, image_filename,
+          crop_semantic_prediction, raw_save_dir,
+          _RAW_FORMAT % (image_id_offset + i),
+          add_colormap=False)
+
+    if FLAGS.also_save_labels:
+      save_annotation.save_annotation(
+          label, label_save_dir,
+          _LABEL_FORMAT % (image_id_offset + i),
           add_colormap=False)
 
 
@@ -194,17 +215,20 @@ def main(unused_argv):
   dataset = segmentation_dataset.get_dataset(
       FLAGS.dataset, FLAGS.vis_split, dataset_dir=FLAGS.dataset_dir)
   train_id_to_eval_id = None
-  if dataset.name == segmentation_dataset.get_cityscapes_dataset_name():
-    tf.logging.info('Cityscapes requires converting train_id to eval_id.')
-    train_id_to_eval_id = _CITYSCAPES_TRAIN_ID_TO_EVAL_ID
 
   # Prepare for visualization.
   tf.gfile.MakeDirs(FLAGS.vis_logdir)
   save_dir = os.path.join(FLAGS.vis_logdir, _SEMANTIC_PREDICTION_SAVE_FOLDER)
   tf.gfile.MakeDirs(save_dir)
-  raw_save_dir = os.path.join(
-      FLAGS.vis_logdir, _RAW_SEMANTIC_PREDICTION_SAVE_FOLDER)
-  tf.gfile.MakeDirs(raw_save_dir)
+  if FLAGS.also_save_raw_predictions:
+      raw_save_dir = os.path.join(
+          FLAGS.vis_logdir, _RAW_SEMANTIC_PREDICTION_SAVE_FOLDER)
+      tf.gfile.MakeDirs(raw_save_dir)
+  if FLAGS.also_save_labels:
+      label_save_dir = os.path.join(
+          FLAGS.vis_logdir, _GROUND_TRUTH_SAVE_FOLDER)
+      tf.gfile.MakeDirs(label_save_dir)
+
 
   tf.logging.info('Visualizing on %s set', FLAGS.vis_split)
 
@@ -281,8 +305,10 @@ def main(unused_argv):
     while (FLAGS.max_number_of_iterations <= 0 or
            num_iters < FLAGS.max_number_of_iterations):
       num_iters += 1
+
       last_checkpoint = slim.evaluation.wait_for_new_checkpoint(
           FLAGS.checkpoint_dir, last_checkpoint)
+      
       start = time.time()
       tf.logging.info(
           'Starting visualization at ' + time.strftime('%Y-%m-%d-%H:%M:%S',
@@ -303,9 +329,11 @@ def main(unused_argv):
                          image_names=samples[common.IMAGE_NAME],
                          image_heights=samples[common.HEIGHT],
                          image_widths=samples[common.WIDTH],
+                         label=samples[common.LABEL],
                          image_id_offset=image_id_offset,
                          save_dir=save_dir,
                          raw_save_dir=raw_save_dir,
+                         label_save_dir=label_save_dir,
                          train_id_to_eval_id=train_id_to_eval_id)
           image_id_offset += FLAGS.vis_batch_size
 

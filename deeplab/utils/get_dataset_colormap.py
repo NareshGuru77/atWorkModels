@@ -1,75 +1,29 @@
-# Copyright 2018 The TensorFlow Authors All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-"""Visualizes the segmentation results via specified color map.
-
-Visualizes the semantic segmentation results by the color map
-defined by the different datasets. Supported colormaps are:
-
-1. PASCAL VOC semantic segmentation benchmark.
-Website: http://host.robots.ox.ac.uk/pascal/VOC/
-"""
 
 import numpy as np
 
 # Dataset names.
-_CITYSCAPES = 'cityscapes'
-_PASCAL = 'pascal'
+_ATWORK = 'atWork'
 
 # Max number of entries in the colormap for each dataset.
 _DATASET_MAX_ENTRIES = {
-    _CITYSCAPES: 19,
-    _PASCAL: 256,
+    _ATWORK: 19,
 }
 
 
-def create_cityscapes_label_colormap():
-  """Creates a label colormap used in CITYSCAPES segmentation benchmark.
+def create_atWork_label_colormap():
 
-  Returns:
-    A Colormap for visualizing segmentation results.
-  """
-  colormap = np.asarray([
-      [128, 64, 128],
-      [244, 35, 232],
-      [70, 70, 70],
-      [102, 102, 156],
-      [190, 153, 153],
-      [153, 153, 153],
-      [250, 170, 30],
-      [220, 220, 0],
-      [107, 142, 35],
-      [152, 251, 152],
-      [70, 130, 180],
-      [220, 20, 60],
-      [255, 0, 0],
-      [0, 0, 142],
-      [0, 0, 70],
-      [0, 60, 100],
-      [0, 80, 100],
-      [0, 0, 230],
-      [119, 11, 32],
-  ])
-  return colormap
+    colormap = np.asarray([[128, 128, 128], [75, 25, 230], [75, 180, 60],
+                           [25, 225, 255], [200, 130, 0], [48, 130, 245],
+                           [180, 30, 145], [240, 240, 70], [230, 50, 240],
+                           [60, 245, 210], [128, 128, 0], [255, 190, 230],
+                           [40, 110, 170], [0, 0, 128], [195, 255, 170],
+                           [0, 128, 128], [180, 215, 255], [128, 0, 0],
+                           [0, 0, 0], [255, 255, 255]])
+    return colormap
 
 
-def get_pascal_name():
-  return _PASCAL
-
-
-def get_cityscapes_name():
-  return _CITYSCAPES
+def get_atWork_name():
+    return _ATWORK
 
 
 def bit_get(val, idx):
@@ -85,24 +39,7 @@ def bit_get(val, idx):
   return (val >> idx) & 1
 
 
-def create_pascal_label_colormap():
-  """Creates a label colormap used in PASCAL VOC segmentation benchmark.
-
-  Returns:
-    A Colormap for visualizing segmentation results.
-  """
-  colormap = np.zeros((_DATASET_MAX_ENTRIES[_PASCAL], 3), dtype=int)
-  ind = np.arange(_DATASET_MAX_ENTRIES[_PASCAL], dtype=int)
-
-  for shift in reversed(range(8)):
-    for channel in range(3):
-      colormap[:, channel] |= bit_get(ind, channel) << shift
-    ind >>= 3
-
-  return colormap
-
-
-def create_label_colormap(dataset=_PASCAL):
+def create_label_colormap(dataset=_ATWORK):
   """Creates a label colormap for the specified dataset.
 
   Args:
@@ -114,15 +51,13 @@ def create_label_colormap(dataset=_PASCAL):
   Raises:
     ValueError: If the dataset is not supported.
   """
-  if dataset == _PASCAL:
-    return create_pascal_label_colormap()
-  elif dataset == _CITYSCAPES:
-    return create_cityscapes_label_colormap()
+  if dataset == _ATWORK:
+    return create_atWork_label_colormap()
   else:
     raise ValueError('Unsupported dataset.')
 
 
-def label_to_color_image(label, dataset=_PASCAL):
+def label_to_color_image(label, dataset=_ATWORK):
   """Adds color defined by the dataset colormap to the label.
 
   Args:
@@ -145,4 +80,5 @@ def label_to_color_image(label, dataset=_PASCAL):
     raise ValueError('label value too large.')
 
   colormap = create_label_colormap(dataset)
+  colormap = np.asarray([list(reversed(color)) for color in colormap])
   return colormap[label]

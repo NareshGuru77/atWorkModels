@@ -32,7 +32,7 @@ flags.DEFINE_string('checkpoint_path', None, 'Checkpoint path')
 flags.DEFINE_string('export_path', None,
                     'Path to output Tensorflow frozen graph.')
 
-flags.DEFINE_integer('num_classes', 21, 'Number of classes.')
+flags.DEFINE_integer('num_classes', 13, 'Number of classes.')
 
 flags.DEFINE_multi_integer('crop_size', [481, 641],
                            'Crop size [height, width].')
@@ -40,7 +40,7 @@ flags.DEFINE_multi_integer('crop_size', [481, 641],
 # For `xception_65`, use atrous_rates = [12, 24, 36] if output_stride = 8, or
 # rates = [6, 12, 18] if output_stride = 16. For `mobilenet_v2`, use None. Note
 # one could use different atrous_rates/output_stride during training/evaluation.
-flags.DEFINE_multi_integer('atrous_rates', [6, 12, 18],
+flags.DEFINE_multi_integer('atrous_rates', None,
                            'Atrous rates for atrous spatial pyramid pooling.')
 
 flags.DEFINE_integer('output_stride', 16,

@@ -483,6 +483,7 @@ def xception_block(scope,
   """
   if unit_rate_list is None:
     unit_rate_list = _DEFAULT_MULTI_GRID
+
   return Block(scope, xception_module, [{
       'depth_list': depth_list,
       'skip_connection_type': skip_connection_type,
@@ -503,6 +504,7 @@ def xception_65(inputs,
                 multi_grid=None,
                 reuse=None,
                 scope='xception_65'):
+
   """Xception-65 model."""
   blocks = [
       xception_block('entry_flow/block1',
@@ -611,3 +613,6 @@ def xception_arg_scope(weight_decay=0.00004,
             [slim.separable_conv2d],
             weights_regularizer=depthwise_regularizer) as arg_sc:
           return arg_sc
+
+if __name__ == '__main__':
+    xception_65(tf.placeholder(tf.float32, shape=[1, 28, 28, 3]))

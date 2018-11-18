@@ -29,7 +29,7 @@ def save_annotation(label,
                     save_dir,
                     filename,
                     add_colormap=True,
-                    colormap_type=get_dataset_colormap.get_pascal_name()):
+                    colormap_type=get_dataset_colormap.get_atWork_name()):
   """Saves the given label to image on disk.
 
   Args:
