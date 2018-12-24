@@ -5,4 +5,4 @@
 * The captured image can then be segmented and the GUI shows a visualization of the infered segmentation mask and also displays a overlay of the mask on the image.
 
 
-Sample videos could be found inside the videos folder.
+[![Video Demo](http://img.youtube.com/vi/jnMbPFT_l0Q&feature=youtu.be/0.jpg)](http://www.youtube.com/watch?v=jnMbPFT_l0Q&feature=youtu.be)
