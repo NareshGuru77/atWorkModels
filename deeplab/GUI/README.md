@@ -6,4 +6,4 @@
 
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=jnMbPFT_l0Q
 " target="_blank"><img src="http://img.youtube.com/vi/jnMbPFT_l0Q/maxresdefault.jpg" 
-alt="Semantic Segmentation Video Demo" width="240" height="180" border="10" /></a>
+alt="Semantic Segmentation Video Demo" width="1280" height="720" border="10" /></a>
